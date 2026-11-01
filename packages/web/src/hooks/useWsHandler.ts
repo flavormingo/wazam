@@ -120,6 +120,13 @@ export function useWsHandler() {
         case 'member.leave':
           removeMember(op.d.club_id, op.d.user_id);
           break;
+        case 'club.add':
+          useClubsStore.getState().addClub(op.d);
+          useChannelsStore.getState().fetchChannels(op.d.id);
+          break;
+        case 'club.update':
+          useClubsStore.getState().updateClub(op.d.id, op.d);
+          break;
         case 'club.remove': {
           const removedClubId = op.d.club_id;
           if (useClubsStore.getState().currentClubId === removedClubId) {
@@ -162,6 +169,7 @@ export function useWsHandler() {
           break;
         case 'friend.accept':
           movePendingToFriends(op.d);
+          useDmsStore.getState().fetchDmChannels();
           break;
         case 'friend.remove':
           removeFriendById(op.d.friendship_id);

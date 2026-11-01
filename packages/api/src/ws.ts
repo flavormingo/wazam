@@ -133,6 +133,20 @@ export function setupWebSocket(app: FastifyInstance, db: Kysely<Database>, redis
           }
         }
 
+        if (op.op === 'club.add') {
+          const addedClubId = op.d.id;
+          const sessions = userSessions.get(userId);
+          if (sessions) {
+            for (const sessionId of sessions) {
+              const client = clients.get(sessionId);
+              if (client && !client.subscribedClubs.has(addedClubId)) {
+                client.subscribedClubs.add(addedClubId);
+                refCountSubscribe(redisSub, `club:${addedClubId}`, clubSubCounts).catch(() => {});
+              }
+            }
+          }
+        }
+
         if (op.op === 'club.remove') {
           const removedClubId = (op.d as { club_id: string }).club_id;
           const sessions = userSessions.get(userId);

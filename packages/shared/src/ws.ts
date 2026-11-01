@@ -1,4 +1,4 @@
-import type { ApiMessage, ApiMember, ApiChannel, ApiSection, ApiDmMessage, ApiFriendship, ApiDmChannel, ApiUser } from './types.js';
+import type { ApiMessage, ApiMember, ApiChannel, ApiSection, ApiDmMessage, ApiFriendship, ApiDmChannel, ApiUser, ApiClub } from './types.js';
 
 export type ClientOp =
   | { op: 'subscribe'; d: { channel_id: string } }
@@ -27,6 +27,8 @@ export type ServerOp =
   | { op: 'section.delete'; d: { id: string; club_id: string } }
   | { op: 'member.join'; d: { club_id: string; member: ApiMember } }
   | { op: 'member.leave'; d: { club_id: string; user_id: string } }
+  | { op: 'club.add'; d: ApiClub }
+  | { op: 'club.update'; d: ApiClub }
   | { op: 'club.remove'; d: { club_id: string } }
   | { op: 'voice.state'; d: VoiceState }
   | { op: 'dm.message.create'; d: ApiDmMessage }

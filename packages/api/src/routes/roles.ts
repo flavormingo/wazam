@@ -114,6 +114,27 @@ export function roleRoutes(app: FastifyInstance, db: Kysely<Database>) {
       return reply.status(403).send({ error: 'Missing MANAGE_ROLES permission' });
     }
 
+    const existing = await db
+      .selectFrom('roles')
+      .select('permissions')
+      .where('id', '=', roleId)
+      .where('club_id', '=', clubId)
+      .executeTakeFirst();
+
+    if (!existing) return reply.status(404).send({ error: 'Role not found' });
+
+    if (!hasPermission(perms, Permissions.ADMIN)) {
+      let rolePerms: bigint;
+      try {
+        rolePerms = BigInt(existing.permissions);
+      } catch {
+        rolePerms = 0n;
+      }
+      if ((rolePerms & ~perms) !== 0n) {
+        return reply.status(403).send({ error: 'Cannot edit a role granting permissions you do not have' });
+      }
+    }
+
     if (body.permissions !== undefined && !hasPermission(perms, Permissions.ADMIN)) {
       try {
         const requested = BigInt(body.permissions);
@@ -175,13 +196,25 @@ export function roleRoutes(app: FastifyInstance, db: Kysely<Database>) {
 
     const role = await db
       .selectFrom('roles')
-      .select(['is_default'])
+      .select(['is_default', 'permissions'])
       .where('id', '=', roleId)
       .where('club_id', '=', clubId)
       .executeTakeFirst();
 
     if (!role) return reply.status(404).send({ error: 'Role not found' });
     if (role.is_default) return reply.status(400).send({ error: 'Cannot delete the default role' });
+
+    if (!hasPermission(perms, Permissions.ADMIN)) {
+      let rolePerms: bigint;
+      try {
+        rolePerms = BigInt(role.permissions);
+      } catch {
+        rolePerms = 0n;
+      }
+      if ((rolePerms & ~perms) !== 0n) {
+        return reply.status(403).send({ error: 'Cannot delete a role granting permissions you do not have' });
+      }
+    }
 
     const deleted = await db.deleteFrom('roles').where('id', '=', roleId).where('club_id', '=', clubId).executeTakeFirst();
     if (!deleted.numDeletedRows) return reply.status(500).send({ error: 'Failed to delete role' });

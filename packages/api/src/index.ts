@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { createDb } from './db/database.js';
 import { createRedis, createRedisSub } from './redis.js';
 import { createMinioClient, ensureBucket } from './storage.js';
+import { VALENTINO_AVATAR_KEY, VALENTINO_AVATAR_SVG } from '@wazup/shared';
 import { authRoutes } from './routes/auth.js';
 import { clubRoutes } from './routes/clubs.js';
 import { channelRoutes } from './routes/channels.js';
@@ -84,6 +85,11 @@ async function main() {
 
   try {
     await ensureBucket(minio, config.minioBucket);
+    const avatarBytes = Buffer.from(VALENTINO_AVATAR_SVG);
+    await minio.putObject(config.minioBucket, VALENTINO_AVATAR_KEY, avatarBytes, avatarBytes.byteLength, {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=604800',
+    });
   } catch (err) {
     app.log.warn('Minio not available, file uploads will fail: %s', (err as Error).message);
   }

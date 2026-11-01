@@ -20,7 +20,7 @@ import { DMCallView } from './DMCallView';
 import { useModalStore } from '../stores/modal';
 import { useUnreadStore } from '../stores/unread';
 import { useMobile } from '../hooks/useMobile';
-import type { ServerOp } from '@wazup/shared';
+import { VALENTINO_ID, type ServerOp } from '@wazup/shared';
 import './DMView.css';
 
 export function DMView() {
@@ -104,6 +104,8 @@ export function DMView() {
           setTypingUsers((prev) => prev.filter((u) => u !== op.d.name));
         }, 5000);
         typingTimers.push(timer);
+      } else if (op.op === 'dm.message.create' && op.d.dm_channel_id === dmChannelId) {
+        setTypingUsers((prev) => prev.filter((u) => u !== op.d.author.name));
       }
     });
     return () => {
@@ -127,6 +129,7 @@ export function DMView() {
   const isActiveCallHere = activeCallDmChannelId === dmChannelId;
   const isOutgoingHere = outgoingCall?.dmChannelId === dmChannelId;
   const isDirectChannel = channel?.type === 'direct';
+  const isValentino = isDirectChannel && channel.members?.some((m: any) => m.id === VALENTINO_ID);
 
   const handleSend = async () => {
     if (sending || !input.trim() || !dmChannelId) return;
@@ -212,6 +215,8 @@ export function DMView() {
   };
 
 
+  const valentinoMessageId = channelMessages.find((m: any) => m.author.id === VALENTINO_ID)?.id;
+
   const groupedMessages: { isGroupStart: boolean; message: any }[] = [];
   for (let i = 0; i < channelMessages.length; i++) {
     const msg = channelMessages[i];
@@ -229,7 +234,7 @@ export function DMView() {
         {mobile && <button className="mobile-back" onClick={() => navigate('/dm')} aria-label="back"><ChevronLeftIcon size={20} /></button>}
         <span className="name">{getRecipientName()}</span>
         {dmChannelId && <MuteButton scopeType="dm" scopeId={dmChannelId} />}
-        {isDirectChannel && (
+        {isDirectChannel && !isValentino && (
           <button
             className="icon-btn"
             onClick={handleStartCall}
@@ -251,7 +256,11 @@ export function DMView() {
             {loading && <div className="loading"><div className="loading-spinner" /></div>}
             <div className="list">
               {groupedMessages.map(({ isGroupStart, message: msg }) => (
-                <div key={msg.id} className={`message ${isGroupStart ? 'group-start' : 'group-cont'} ${reactionPickerId === msg.id ? 'menu-open' : ''}`}>
+                <div
+                  key={msg.id}
+                  className={`message ${isGroupStart ? 'group-start' : 'group-cont'} ${reactionPickerId === msg.id ? 'menu-open' : ''}`}
+                  data-tour={msg.id === valentinoMessageId ? 'valentino-message' : undefined}
+                >
                   {isGroupStart && (
                     <div className="avatar" onClick={() => openProfile(msg.author.id)}>
                       {msg.author.avatar_url ? (
@@ -340,7 +349,7 @@ export function DMView() {
           )}
 
           <div className="msg-input">
-            <div className="input-wrap">
+            <div className="input-wrap" data-tour="composer">
               <FormatToolbar
                 textareaRef={textareaRef}
                 value={input}

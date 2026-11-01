@@ -22,6 +22,14 @@ export function setHighContrast(on: boolean) {
   }
 }
 
+export function getTourSeen(): boolean {
+  return localStorage.getItem('tourSeen') === 'true';
+}
+
+export function setTourSeen(seen: boolean) {
+  localStorage.setItem('tourSeen', String(seen));
+}
+
 export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

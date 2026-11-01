@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useClubsStore } from '../stores/clubs';
@@ -8,6 +8,7 @@ import './LoginPage.css';
 export function InvitePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const [invite, setInvite] = useState<any>(null);
   const [error, setError] = useState('');
@@ -19,10 +20,19 @@ export function InvitePage() {
     }
   }, [code]);
 
+  useEffect(() => {
+    if (params.get('profile_setup') === '1') localStorage.setItem('needs_profile_setup', 'true');
+  }, [params]);
+
+  const toLogin = (signup?: boolean) => {
+    const next = encodeURIComponent(`/invite/${code}`);
+    navigate(`/login?${signup ? 'mode=signup&' : ''}next=${next}`);
+  };
+
   const handleJoin = async () => {
     if (!code) return;
     if (!user) {
-      window.location.href = `/api/auth/login`;
+      toLogin();
       return;
     }
     setJoining(true);
@@ -73,8 +83,11 @@ export function InvitePage() {
           </p>
         </div>
         <button className="btn btn-primary submit" onClick={handleJoin} disabled={joining} style={{ width: '100%', marginTop: 'var(--space-lg)' }}>
-          {joining ? 'joining...' : 'accept invite'}
+          {joining ? 'joining...' : user ? 'accept invite' : 'log in to join'}
         </button>
+        {!user && (
+          <button className="back" onClick={() => toLogin(true)}>new here? sign up</button>
+        )}
       </div>
     </div>
   );

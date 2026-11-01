@@ -1,5 +1,5 @@
 import { useState, useEffect, type CSSProperties } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { authClient } from '../lib/authClient';
 import { useAuthStore } from '../stores/auth';
 import { cycleFlavor } from '../lib/themes';
@@ -112,8 +112,15 @@ function LoginFlies() {
   );
 }
 
+export function safeNext(value: string | null) {
+  return value && /^\/(?![/\\])/.test(value) ? value : null;
+}
+
 export function LoginPage() {
-  const [mode, setMode] = useState<Mode>('login');
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
+  const verifyCallback = next ? `${next}${next.includes('?') ? '&' : '?'}profile_setup=1` : '/?profile_setup=1';
+  const [mode, setMode] = useState<Mode>(params.get('mode') === 'signup' ? 'signup' : 'login');
 
   const handleLogo = (e: React.MouseEvent<HTMLHeadingElement>) => {
     cycleFlavor();
@@ -146,7 +153,7 @@ export function LoginPage() {
           password,
           username,
           name: username,
-          callbackURL: '/?profile_setup=1',
+          callbackURL: verifyCallback,
         });
         if (res.error) {
           setError(res.error.message || 'signup failed');
@@ -184,7 +191,7 @@ export function LoginPage() {
         }
       }
       await fetchUser();
-      navigate('/');
+      navigate(next ?? '/', { replace: true });
     } catch (err: any) {
       setError(err.message || 'something went wrong');
     } finally {
@@ -203,7 +210,7 @@ export function LoginPage() {
     try {
       await authClient.sendVerificationEmail({
         email,
-        callbackURL: '/?profile_setup=1',
+        callbackURL: verifyCallback,
       });
       setResent(true);
     } catch {

@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
+import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_AVATAR_KEY } from '@wazup/shared';
 import type { Database, FriendshipRow } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { getPublicUrl } from '../storage.js';
+import { befriendValentino } from '../valentino.js';
 import type Redis from 'ioredis';
 
 function toApiUser(u: { id: string; email: string; username: string; avatar_key: string | null }) {
@@ -273,6 +275,22 @@ export function friendRoutes(app: FastifyInstance, db: Kysely<Database>, redis: 
       }
       throw err;
     }
+  });
+
+  app.post('/api/friends/valentino', { preHandler: requireAuth }, async (request) => {
+    const { friendship } = await befriendValentino(db, request.userId!);
+    if (friendship) {
+      await redis.publish(`user:${request.userId}`, JSON.stringify({
+        op: 'friend.accept',
+        d: {
+          id: friendship.id,
+          user: toApiUser({ id: VALENTINO_ID, email: '', username: VALENTINO_USERNAME, avatar_key: VALENTINO_AVATAR_KEY }),
+          status: 'accepted' as const,
+          created_at: friendship.created_at.toISOString(),
+        },
+      }));
+    }
+    return { added: !!friendship };
   });
 
   app.post('/api/friends/:friendshipId/accept', { preHandler: requireAuth }, async (request, reply) => {

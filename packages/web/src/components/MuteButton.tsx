@@ -16,7 +16,6 @@ export function MuteButton({ scopeType, scopeId }: Props) {
       onClick={() => toggle(scopeType, scopeId)}
       aria-label={muted ? 'unmute notifications' : 'mute notifications'}
       aria-pressed={muted}
-      title={muted ? 'notifications muted' : 'mute notifications'}
     >
       {muted ? <BellOffIcon size={18} /> : <BellIcon size={18} />}
     </button>

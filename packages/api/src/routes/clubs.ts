@@ -135,13 +135,17 @@ export function clubRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
       return club;
     });
 
-    return reply.status(201).send({
+    const result = {
       id: club.id,
       name: club.name,
       slug: club.slug,
       icon_url: club.icon_key ? getPublicUrl(club.icon_key) : null,
       owner_id: club.owner_id,
-    });
+    };
+
+    await redis.publish(`user:${request.userId}`, JSON.stringify({ op: 'club.add', d: result }));
+
+    return reply.status(201).send(result);
   });
 
   app.get('/api/club/:clubId', { preHandler: requireAuth }, async (request, reply) => {
@@ -233,11 +237,7 @@ export function clubRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
       owner_id: updated.owner_id,
     };
 
-    await redis.publish('club:events', JSON.stringify({
-      type: 'club.update',
-      clubId: club.id,
-      data: result,
-    }));
+    await redis.publish(`club:${club.id}`, JSON.stringify({ op: 'club.update', d: result }));
 
     return result;
   });
@@ -249,8 +249,12 @@ export function clubRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
     if (club.owner_id !== request.userId) {
       return reply.status(403).send({ error: 'Only the club owner can delete it' });
     }
+    const members = await db.selectFrom('memberships').select('user_id').where('club_id', '=', club.id).execute();
     const deleted = await db.deleteFrom('clubs').where('id', '=', club.id).executeTakeFirst();
     if (!deleted.numDeletedRows) return reply.status(500).send({ error: 'Failed to delete club' });
+    for (const m of members) {
+      await redis.publish(`user:${m.user_id}`, JSON.stringify({ op: 'club.remove', d: { club_id: club.id } }));
+    }
     return { ok: true };
   });
 
@@ -268,7 +272,12 @@ export function clubRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
       .where('user_id', '=', new_owner_id).where('club_id', '=', club.id).executeTakeFirst();
     if (!targetMember) return reply.status(400).send({ error: 'Target user is not a member' });
 
-    await db.updateTable('clubs').set({ owner_id: new_owner_id, updated_at: new Date() }).where('id', '=', club.id).execute();
+    const updated = await db
+      .updateTable('clubs')
+      .set({ owner_id: new_owner_id, updated_at: new Date() })
+      .where('id', '=', club.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
 
     await db.insertInto('audit_log').values({
       club_id: club.id,
@@ -277,6 +286,17 @@ export function clubRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
       target_type: 'user',
       target_id: new_owner_id,
     }).execute();
+
+    await redis.publish(`club:${club.id}`, JSON.stringify({
+      op: 'club.update',
+      d: {
+        id: updated.id,
+        name: updated.name,
+        slug: updated.slug,
+        icon_url: updated.icon_key ? getPublicUrl(updated.icon_key) : null,
+        owner_id: updated.owner_id,
+      },
+    }));
 
     return { ok: true };
   });

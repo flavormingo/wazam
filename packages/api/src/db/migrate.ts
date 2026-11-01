@@ -2,7 +2,9 @@ import 'dotenv/config';
 import pg from 'pg';
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { nanoid } from 'nanoid';
+import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_DISPLAY_NAME, VALENTINO_AVATAR_KEY } from '@wazup/shared';
 import type { Database } from './database.js';
+import { befriendValentino } from '../valentino.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -598,6 +600,50 @@ async function migrate() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `.execute(db);
+
+  await sql`
+    INSERT INTO users (id, email, email_verified, display_name, username, "displayUsername", avatar_key, status_emoji, status_text, bio, friend_privacy)
+    VALUES (
+      ${VALENTINO_ID},
+      ${'valentino@wazup.chat'},
+      true,
+      ${VALENTINO_DISPLAY_NAME},
+      ${VALENTINO_USERNAME},
+      ${VALENTINO_DISPLAY_NAME},
+      ${VALENTINO_AVATAR_KEY},
+      ${'🐾'},
+      ${'say wazup'},
+      ${"hi, i'm valentino — your first friend on wazup. i'll show you around."},
+      'everyone'
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      email_verified = true,
+      display_name = EXCLUDED.display_name,
+      username = EXCLUDED.username,
+      "displayUsername" = EXCLUDED."displayUsername",
+      avatar_key = EXCLUDED.avatar_key,
+      status_emoji = EXCLUDED.status_emoji,
+      status_text = EXCLUDED.status_text,
+      bio = EXCLUDED.bio
+  `.execute(db).catch((err) => {
+    console.error('ensureValentino failed:', err);
+  });
+
+  const toBackfill = await sql<{ id: string }>`
+    SELECT u.id FROM users u
+    WHERE u.email_verified = true
+      AND u.id <> ${VALENTINO_ID}
+      AND NOT EXISTS (
+        SELECT 1 FROM dm_channels dc
+          JOIN dm_members m1 ON m1.dm_channel_id = dc.id AND m1.user_id = ${VALENTINO_ID}
+          JOIN dm_members m2 ON m2.dm_channel_id = dc.id AND m2.user_id = u.id
+         WHERE dc.type = 'direct'
+      )
+  `.execute(db).catch(() => ({ rows: [] as { id: string }[] }));
+
+  for (const row of toBackfill.rows) {
+    await befriendValentino(db, row.id).catch((err) => console.error('Valentino backfill failed for', row.id, err));
+  }
 
   console.log('Migrations complete!');
   await db.destroy();

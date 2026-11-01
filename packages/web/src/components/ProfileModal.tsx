@@ -535,7 +535,7 @@ export function ProfileModal({ userId, onClose }: Props) {
 
         {profile.created_at && (
           <div className="profile-footer">
-            user #{profile.user_number || '—'} · est. {formatShortDate(profile.created_at)}
+            user #{profile.user_number ?? '—'} · est. {formatShortDate(profile.created_at)}
           </div>
         )}
         </div>

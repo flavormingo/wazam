@@ -109,7 +109,7 @@ export function ClubMembersModal() {
 
   const handleUnban = async (ban: any) => {
     try {
-      await api.unbanMember(clubId, ban.user_id || ban.user?.id);
+      await api.unbanMember(clubId, ban.user_id);
       await loadBans();
     } catch (e: any) {
       setError(e.message);
@@ -220,7 +220,7 @@ export function ClubMembersModal() {
             {bans.map((ban: any) => (
               <div key={ban.id} className="ban-row">
                 <div className="ban-info">
-                  <div className="ban-name">{ban.user?.name || ban.user_id}</div>
+                  <div className="ban-name">{ban.name}</div>
                   {ban.reason && <div className="ban-reason">{ban.reason}</div>}
                 </div>
                 <button className="btn btn-sm btn-secondary" onClick={() => handleUnban(ban)}>unban</button>

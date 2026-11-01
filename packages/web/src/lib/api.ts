@@ -152,6 +152,8 @@ export const api = {
     request<any>(`/api/friends/${friendshipId}/accept`, { method: 'POST', body: '{}' }),
   removeFriend: (friendshipId: string) =>
     request<any>(`/api/friends/${friendshipId}`, { method: 'DELETE' }),
+  befriendValentino: () =>
+    request<{ added: boolean }>('/api/friends/valentino', { method: 'POST', body: '{}' }),
 
   getDmChannels: () => request<any[]>('/api/dm'),
   createDm: (user_ids: string[]) =>

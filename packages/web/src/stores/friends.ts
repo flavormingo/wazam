@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
+import { useDmsStore } from './dms';
 
 interface FriendsState {
   friends: any[];
@@ -17,7 +18,7 @@ interface FriendsState {
   movePendingToFriends: (friendship: any) => void;
 }
 
-export const useFriendsStore = create<FriendsState>((set) => ({
+export const useFriendsStore = create<FriendsState>((set, get) => ({
   friends: [],
   incoming: [],
   outgoing: [],
@@ -65,6 +66,8 @@ export const useFriendsStore = create<FriendsState>((set) => ({
 
   removeFriend: async (friendshipId: string) => {
     await api.removeFriend(friendshipId);
+    const friend = get().friends.find((f: any) => f.id === friendshipId);
+    if (friend) useDmsStore.getState().removeDmChannelByUserId(friend.user.id);
     set((s) => ({
       friends: s.friends.filter((f: any) => f.id !== friendshipId),
       incoming: s.incoming.filter((r: any) => r.id !== friendshipId),

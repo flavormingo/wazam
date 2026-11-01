@@ -1,7 +1,7 @@
 {
   "name": "wazup",
   "short_name": "wazup",
-  "description": "chat that has flavors",
+  "description": "digital social clubs for cool cats",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",

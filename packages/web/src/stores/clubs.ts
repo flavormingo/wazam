@@ -8,6 +8,7 @@ interface ClubsState {
   fetchClubs: () => Promise<void>;
   setCurrentClub: (id: string | null) => void;
   createClub: (data: { name: string; slug?: string; icon_key?: string }) => Promise<any>;
+  addClub: (club: any) => void;
   updateClub: (id: string, data: any) => void;
   removeClub: (id: string) => void;
 }
@@ -31,9 +32,11 @@ export const useClubsStore = create<ClubsState>((set) => ({
 
   createClub: async (data) => {
     const club = await api.createClub(data);
-    set((s) => ({ clubs: [...s.clubs, club] }));
+    set((s) => (s.clubs.some((c) => c.id === club.id) ? s : { clubs: [...s.clubs, club] }));
     return club;
   },
+
+  addClub: (club) => set((s) => (s.clubs.some((c) => c.id === club.id) ? s : { clubs: [...s.clubs, club] })),
 
   updateClub: (id, data) => set((s) => ({
     clubs: s.clubs.map((c) => c.id === id ? { ...c, ...data } : c),

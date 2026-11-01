@@ -227,6 +227,19 @@ export function inviteRoutes(app: FastifyInstance, db: Kysely<Database>, redis: 
 
     const club = await db.selectFrom('clubs').selectAll().where('id', '=', invite.club_id).executeTakeFirst();
 
+    if (club) {
+      await redis.publish(`user:${request.userId}`, JSON.stringify({
+        op: 'club.add',
+        d: {
+          id: club.id,
+          name: club.name,
+          slug: club.slug,
+          icon_url: club.icon_key ? getPublicUrl(club.icon_key) : null,
+          owner_id: club.owner_id,
+        },
+      }));
+    }
+
     return {
       club: club ? { id: club.id, name: club.name, icon_url: club.icon_key ? getPublicUrl(club.icon_key) : null } : null,
     };

@@ -5,6 +5,7 @@ import { createAuthMiddleware } from '../middleware.js';
 import { getPresignedPost, getPublicUrl } from '../storage.js';
 import { config } from '../config.js';
 import { nanoid } from 'nanoid';
+import { VALENTINO_ID } from '@wazup/shared';
 
 const ALLOWED_CONNECTIONS = [
   'dribbble', 'facebook', 'github', 'instagram', 'linkedin', 'medium',
@@ -89,9 +90,10 @@ export function userRoutes(app: FastifyInstance, db: Kysely<Database>) {
       db.selectFrom('users')
         .select(db.fn.count('id').as('n'))
         .where('created_at', '<=', user.created_at)
+        .where('id', '<>', VALENTINO_ID)
         .compile()
     );
-    const userNumber = Number(rows[0]?.n ?? 0);
+    const userNumber = user.id === VALENTINO_ID ? 0 : Number(rows[0]?.n ?? 0);
 
     return {
       id: user.id,

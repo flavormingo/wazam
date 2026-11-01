@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Routes, Route, useParams, useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router';
 import { useClubsStore } from '../stores/clubs';
 import { useChannelsStore } from '../stores/channels';
 import { useFriendsStore } from '../stores/friends';
@@ -10,6 +10,8 @@ import { useMutesStore } from '../stores/mutes';
 import { api } from '../lib/api';
 import { wsClient } from '../lib/ws';
 import { reconcilePush, maybeAutoEnable } from '../lib/push';
+import { getTourSeen } from '../lib/preferences';
+import { startTour } from '../stores/tour';
 import { useWsHandler } from '../hooks/useWsHandler';
 import { Navbar } from '../components/Navbar';
 import { ClubSidebar } from '../components/ClubSidebar';
@@ -29,6 +31,7 @@ import { CreateChannelModal } from '../components/CreateChannelModal';
 import { CreateSectionModal } from '../components/CreateSectionModal';
 import { IncomingCallOverlay } from '../components/IncomingCallOverlay';
 import { OutgoingCallOverlay } from '../components/OutgoingCallOverlay';
+import { TourOverlay } from '../components/TourOverlay';
 import { WormMark } from '../components/WormMark';
 import './MainLayout.css';
 
@@ -165,6 +168,7 @@ export function MainLayout() {
       {active === 'create-profile' && <CreateProfileModal onClose={() => {
         localStorage.removeItem('needs_profile_setup');
         close();
+        if (!getTourSeen()) startTour();
       }} />}
       {active === 'club-members' && <ClubMembersModal />}
       {active === 'edit-club' && <EditClubModal />}
@@ -172,6 +176,7 @@ export function MainLayout() {
       {active === 'create-section' && <CreateSectionModal />}
       <IncomingCallOverlay />
       <OutgoingCallOverlay />
+      <TourOverlay />
     </div>
   );
 }
@@ -205,12 +210,29 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 function ClubContent() {
   const { clubId: param } = useParams<{ clubId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { setCurrentClub } = useClubsStore();
   const clubs = useClubsStore((s) => s.clubs);
   const [resolvedId, setResolvedId] = useState<string | null>(null);
+  const seenClubId = useRef<string | null>(null);
 
   const fromStore = clubs.find((c) => c.id === param || c.slug === param);
   const clubId = fromStore?.id || resolvedId;
+  const club = clubs.find((c) => c.id === clubId);
+
+  useEffect(() => {
+    if (club) {
+      seenClubId.current = club.id;
+      return;
+    }
+    if (clubId && seenClubId.current === clubId) navigate('/', { replace: true });
+  }, [club, clubId, navigate]);
+
+  useEffect(() => {
+    if (!club?.slug || !param || param === club.slug || param === club.id) return;
+    navigate(location.pathname.replace(`/club/${param}`, `/club/${club.slug}`), { replace: true });
+  }, [club?.slug, club?.id, param, location.pathname, navigate]);
 
   useEffect(() => {
     if (!param) return;

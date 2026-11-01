@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_AVATAR_KEY } from '@wazup/shared';
 import type { Database } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { getPublicUrl } from '../storage.js';
@@ -13,6 +14,51 @@ function toApiUser(u: { id: string; email: string; username: string; avatar_key:
     name: u.username,
     avatar_url: u.avatar_key ? getPublicUrl(u.avatar_key) : null,
   };
+}
+
+const meowTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function meowBack(db: Kysely<Database>, redis: Redis, dmChannelId: string) {
+  clearTimeout(meowTimers.get(dmChannelId));
+  meowTimers.set(dmChannelId, setTimeout(async () => {
+    meowTimers.delete(dmChannelId);
+    try {
+      await redis.publish(`dm:${dmChannelId}`, JSON.stringify({
+        op: 'dm.typing.start',
+        d: { dm_channel_id: dmChannelId, user_id: VALENTINO_ID, name: VALENTINO_USERNAME },
+      }));
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+
+      const message = await db
+        .insertInto('dm_messages')
+        .values({ dm_channel_id: dmChannelId, author_id: VALENTINO_ID, content: 'meow' })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      await db.updateTable('dm_channels').set({ updated_at: new Date() }).where('id', '=', dmChannelId).execute();
+      await db.updateTable('dm_members')
+        .set({ last_read_at: message.created_at })
+        .where('dm_channel_id', '=', dmChannelId)
+        .where('user_id', '=', VALENTINO_ID)
+        .execute();
+
+      const apiMessage = {
+        id: message.id,
+        dm_channel_id: message.dm_channel_id,
+        author: toApiUser({ id: VALENTINO_ID, email: '', username: VALENTINO_USERNAME, avatar_key: VALENTINO_AVATAR_KEY }),
+        content: message.content,
+        reactions: [],
+        edited_at: null,
+        deleted: false,
+        created_at: message.created_at.toISOString(),
+      };
+
+      await redis.publish(`dm:${dmChannelId}`, JSON.stringify({ op: 'dm.message.create', d: apiMessage }));
+      void sendPushForDmMessage(db, redis, apiMessage);
+    } catch (err) {
+      console.error('Valentino meow failed:', err);
+    }
+  }, 700));
 }
 
 async function getDmReactionsByMessage(
@@ -399,6 +445,16 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
 
     await redis.publish(`dm:${dmChannelId}`, JSON.stringify({ op: 'dm.message.create', d: apiMessage }));
     void sendPushForDmMessage(db, redis, apiMessage);
+
+    const withValentino = await db
+      .selectFrom('dm_members')
+      .innerJoin('dm_channels', 'dm_channels.id', 'dm_members.dm_channel_id')
+      .select('dm_members.id')
+      .where('dm_members.dm_channel_id', '=', dmChannelId)
+      .where('dm_members.user_id', '=', VALENTINO_ID)
+      .where('dm_channels.type', '=', 'direct')
+      .executeTakeFirst();
+    if (withValentino) meowBack(db, redis, dmChannelId);
 
     return reply.status(201).send(apiMessage);
   });

@@ -13,6 +13,7 @@ import {
 } from '../lib/preferences';
 import { XIcon, SignOutIcon, ChevronDownIcon } from './icons';
 import { Modal } from './Modal';
+import { startTour } from '../stores/tour';
 import './SettingsModal.css';
 
 interface DropdownOption<T extends string> {
@@ -127,7 +128,7 @@ export function SettingsModal({ onClose }: Props) {
             </button>
           </div>
           {tab === 'account' && <AccountTab />}
-          {tab === 'chat' && <ChatTab />}
+          {tab === 'chat' && <ChatTab onClose={onClose} />}
           {tab === 'notifications' && <NotificationsTab />}
           {tab === 'style' && <StyleTab />}
           {tab === 'yikes' && <YikesTab />}
@@ -489,7 +490,7 @@ function NotificationsTab() {
   return <NotificationsSection />;
 }
 
-function ChatTab() {
+function ChatTab({ onClose }: { onClose: () => void }) {
   const [timeFormat, setTimeFormatState] = useState<TimeFormat>(getTimeFormat());
 
   const handleTimeFormat = (format: TimeFormat) => {
@@ -518,6 +519,14 @@ function ChatTab() {
           ]}
           onChange={handleTimeFormat}
         />
+      </div>
+
+      <div className="section">
+        <div className="title overline">welcome tour</div>
+        <div className="field">
+          <span className="label">take valentino's tour again</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => { onClose(); startTour(); }}>replay</button>
+        </div>
       </div>
     </>
   );

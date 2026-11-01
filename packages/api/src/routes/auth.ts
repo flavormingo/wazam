@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { auth } from '../auth.js';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { Kysely } from 'kysely';
+import { VALENTINO_ID } from '@wazup/shared';
 import type { Database } from '../db/database.js';
 import { getPublicUrl } from '../storage.js';
 
@@ -29,6 +30,7 @@ export function authRoutes(app: FastifyInstance, db: Kysely<Database>) {
       db.selectFrom('users')
         .select(db.fn.count('id').as('n'))
         .where('created_at', '<=', user.created_at)
+        .where('id', '<>', VALENTINO_ID)
         .compile()
     );
     const userNumber = Number(rows[0]?.n ?? 0);

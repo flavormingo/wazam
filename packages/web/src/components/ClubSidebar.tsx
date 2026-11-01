@@ -71,6 +71,7 @@ export function ClubSidebar() {
       <div className="list">
         <button
           className={`icon home ${!clubId ? 'active' : ''}`}
+          data-tour="home"
           onClick={() => navigate('/dm')}
           aria-label="messages"
         >
@@ -102,6 +103,7 @@ export function ClubSidebar() {
       <div className="bottom">
         <button
           className="icon create"
+          data-tour="create-club"
           onClick={() => setShowCreate(true)}
           aria-label="create club"
         >
