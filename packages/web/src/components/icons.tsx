@@ -8,6 +8,9 @@ import {
   MicrophoneMute,
   Headset,
   Phone,
+  PhoneIncome,
+  PhoneOutcome,
+  PhoneXmark,
   Xmark,
   Group,
   Attachment,
@@ -85,6 +88,9 @@ export const MicIcon = icon(Microphone);
 export const MicMutedIcon = icon(MicrophoneMute);
 export const HeadphonesIcon = icon(Headset);
 export const PhoneIcon = icon(Phone);
+export const PhoneIncomeIcon = icon(PhoneIncome);
+export const PhoneOutcomeIcon = icon(PhoneOutcome);
+export const PhoneXmarkIcon = icon(PhoneXmark);
 export const XIcon = icon(Xmark);
 export const UsersIcon = icon(Group);
 export const PaperclipIcon = icon(Attachment);

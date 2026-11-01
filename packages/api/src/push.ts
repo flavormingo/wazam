@@ -1,7 +1,7 @@
 import webpush from 'web-push';
 import type { Kysely } from 'kysely';
 import type Redis from 'ioredis';
-import type { ApiMessage, ApiDmMessage } from '@wazam/shared';
+import { describeAttachments, type ApiAttachment, type ApiMessage, type ApiDmMessage } from '@wazam/shared';
 import type { Database } from './db/database.js';
 import { config } from './config.js';
 
@@ -37,9 +37,9 @@ interface PushPayload {
   url: string;
 }
 
-function preview(content: string) {
+function preview(content: string, attachments?: ApiAttachment[]) {
   const t = (content || '').replace(/\s+/g, ' ').trim();
-  if (!t) return 'New message';
+  if (!t) return attachments?.length ? describeAttachments(attachments) : 'New message';
   return t.length > 140 ? `${t.slice(0, 139)}…` : t;
 }
 
@@ -145,6 +145,7 @@ async function sendToUsers(
   userIds: string[],
   payload: PushPayload,
   urgency: 'normal' | 'high',
+  ttl = 172800,
 ) {
   if (!enabled || !userIds.length) return;
   const subs = await db
@@ -160,7 +161,7 @@ async function sendToUsers(
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           data,
-          { TTL: 172800, urgency },
+          { TTL: ttl, urgency },
         );
       } catch (err) {
         const code = (err as { statusCode?: number }).statusCode;
@@ -177,6 +178,37 @@ async function sendToUsers(
       }
     }),
   );
+}
+
+export async function sendPushForIncomingCall(
+  db: Kysely<Database>,
+  redis: Redis,
+  dmChannelId: string,
+  calleeId: string,
+  callerName: string,
+) {
+  if (!enabled) return;
+  try {
+    if (await redis.exists(`fg:${calleeId}`)) return;
+    let recipients = await filterMuted(db, [calleeId], [['dm', dmChannelId]]);
+    recipients = await filterPrefs(db, recipients, true, () => false);
+    if (!recipients.length) return;
+    await sendToUsers(
+      db,
+      recipients,
+      {
+        type: 'call',
+        title: callerName,
+        body: 'incoming call',
+        tag: `dm:${dmChannelId}`,
+        url: `/dm/${dmChannelId}`,
+      },
+      'high',
+      30,
+    );
+  } catch (err) {
+    console.error('sendPushForIncomingCall failed:', err);
+  }
 }
 
 export async function sendPushForChannelMessage(
@@ -220,7 +252,7 @@ export async function sendPushForChannelMessage(
       {
         type: 'channel',
         title: `${msg.author.name} · #${channelName}${clubName ? ` · ${clubName}` : ''}`,
-        body: preview(msg.content),
+        body: preview(msg.content, msg.attachments),
         tag: `channel:${msg.channel_id}`,
         url: `/club/${slug}/channel/${msg.channel_id}`,
       },
@@ -257,7 +289,7 @@ export async function sendPushForDmMessage(
       {
         type: 'dm',
         title: msg.author.name,
-        body: preview(msg.content),
+        body: preview(msg.content, msg.attachments),
         tag: `dm:${msg.dm_channel_id}`,
         url: `/dm/${msg.dm_channel_id}`,
       },

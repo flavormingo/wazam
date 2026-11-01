@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
-import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_AVATAR_KEY } from '@wazam/shared';
+import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_AVATAR_KEY, type ApiAttachment } from '@wazam/shared';
 import type { Database } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
-import { getPublicUrl } from '../storage.js';
+import { getPublicUrl, removeStoredObject } from '../storage.js';
 import { sendPushForDmMessage } from '../push.js';
 import type Redis from 'ioredis';
 
@@ -59,6 +59,25 @@ function meowBack(db: Kysely<Database>, redis: Redis, dmChannelId: string) {
       console.error('Valentino meow failed:', err);
     }
   }, 700));
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getDmAttachmentsByMessage(db: Kysely<Database>, messageIds: string[]) {
+  const map = new Map<string, ApiAttachment[]>();
+  if (!messageIds.length) return map;
+  const rows = await db
+    .selectFrom('attachments')
+    .selectAll()
+    .where('dm_message_id', 'in', messageIds)
+    .orderBy('created_at')
+    .execute();
+  for (const a of rows) {
+    const list = map.get(a.dm_message_id!) || [];
+    list.push({ id: a.id, filename: a.filename, content_type: a.content_type, size: a.size, url: getPublicUrl(a.storage_key) });
+    map.set(a.dm_message_id!, list);
+  }
+  return map;
 }
 
 async function getDmReactionsByMessage(
@@ -159,6 +178,8 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
           'dm_messages.id',
           'dm_messages.dm_channel_id',
           'dm_messages.content',
+          'dm_messages.call_status',
+          'dm_messages.call_duration',
           'dm_messages.edited_at',
           'dm_messages.deleted',
           'dm_messages.created_at',
@@ -189,6 +210,8 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
                 avatar_key: lastMsg.author_avatar_key,
               }),
               content: lastMsg.content,
+              call: lastMsg.call_status ? { status: lastMsg.call_status, duration: lastMsg.call_duration } : null,
+              attachments: [] as ApiAttachment[],
               edited_at: lastMsg.edited_at?.toISOString() ?? null,
               deleted: lastMsg.deleted,
               created_at: lastMsg.created_at.toISOString(),
@@ -197,6 +220,11 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
         updated_at: ch.updated_at.toISOString(),
         last_read_at: dmReadMap.get(ch.id)?.toISOString() ?? null,
       });
+    }
+
+    const lastAttachments = await getDmAttachmentsByMessage(db, result.flatMap((r) => (r.last_message ? [r.last_message.id] : [])));
+    for (const r of result) {
+      if (r.last_message) r.last_message.attachments = lastAttachments.get(r.last_message.id) || [];
     }
 
     return result;
@@ -352,6 +380,8 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
         'dm_messages.id',
         'dm_messages.dm_channel_id',
         'dm_messages.content',
+        'dm_messages.call_status',
+        'dm_messages.call_duration',
         'dm_messages.edited_at',
         'dm_messages.deleted',
         'dm_messages.created_at',
@@ -374,6 +404,7 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
     const messages = await query.execute();
 
     const reactionsByMessage = await getDmReactionsByMessage(db, messages.map((m) => m.id), request.userId!);
+    const attachmentsByMessage = await getDmAttachmentsByMessage(db, messages.map((m) => m.id));
 
     return messages.reverse().map((m) => ({
       id: m.id,
@@ -385,6 +416,8 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
         avatar_key: m.author_avatar_key,
       }),
       content: m.content,
+      call: m.call_status ? { status: m.call_status, duration: m.call_duration } : null,
+      attachments: attachmentsByMessage.get(m.id) || [],
       reactions: reactionsByMessage.get(m.id) || [],
       edited_at: m.edited_at?.toISOString() ?? null,
       deleted: m.deleted,
@@ -394,10 +427,17 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
 
   app.post('/api/dm/:dmChannelId/messages', { preHandler: requireAuth }, async (request, reply) => {
     const { dmChannelId } = request.params as { dmChannelId: string };
-    const { content } = request.body as { content: string };
+    const { content, attachment_ids } = request.body as { content?: string; attachment_ids?: string[] };
 
-    if (!content || !content.trim() || content.length > 4000) {
-      return reply.status(400).send({ error: 'Content is required (max 4000 chars)' });
+    const hasAttachments = Array.isArray(attachment_ids) && attachment_ids.length > 0;
+    if ((!content || !content.trim()) && !hasAttachments) {
+      return reply.status(400).send({ error: 'Content or attachments required' });
+    }
+    if (content && content.length > 4000) {
+      return reply.status(400).send({ error: 'Content max 4000 chars' });
+    }
+    if (hasAttachments && !attachment_ids.every((id) => typeof id === 'string' && UUID_RE.test(id))) {
+      return reply.status(400).send({ error: 'Invalid attachments' });
     }
 
     const membership = await db
@@ -414,10 +454,21 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
       .values({
         dm_channel_id: dmChannelId,
         author_id: request.userId!,
-        content: content.trim(),
+        content: (content || '').trim(),
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    if (hasAttachments) {
+      await db
+        .updateTable('attachments')
+        .set({ dm_message_id: message.id })
+        .where('id', 'in', attachment_ids)
+        .where('message_id', 'is', null)
+        .where('dm_message_id', 'is', null)
+        .execute();
+    }
+    const attachments = hasAttachments ? (await getDmAttachmentsByMessage(db, [message.id])).get(message.id) || [] : [];
 
     await db
       .updateTable('dm_channels')
@@ -431,6 +482,7 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
       dm_channel_id: message.dm_channel_id,
       author: toApiUser(user),
       content: message.content,
+      attachments,
       reactions: [],
       edited_at: null,
       deleted: false,
@@ -502,6 +554,7 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
 
     if (!message) return reply.status(404).send({ error: 'Message not found' });
     if (message.deleted) return reply.status(400).send({ error: 'Cannot edit a deleted message' });
+    if (message.call_status) return reply.status(400).send({ error: 'Cannot edit a call message' });
     if (message.author_id !== request.userId) return reply.status(403).send({ error: 'Can only edit your own messages' });
 
     const updated = await db
@@ -513,11 +566,13 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
 
     const user = request.user!;
     const reactions = (await getDmReactionsByMessage(db, [messageId], request.userId!)).get(messageId) || [];
+    const attachments = (await getDmAttachmentsByMessage(db, [messageId])).get(messageId) || [];
     const apiMessage = {
       id: updated.id,
       dm_channel_id: updated.dm_channel_id,
       author: toApiUser(user),
       content: updated.content,
+      attachments,
       reactions,
       edited_at: updated.edited_at?.toISOString() ?? null,
       deleted: updated.deleted,
@@ -534,13 +589,23 @@ export function dmRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redi
 
     const message = await db
       .selectFrom('dm_messages')
-      .select(['author_id', 'dm_channel_id'])
+      .select(['author_id', 'dm_channel_id', 'call_status'])
       .where('id', '=', messageId)
       .where('dm_channel_id', '=', dmChannelId)
       .executeTakeFirst();
 
     if (!message) return reply.status(404).send({ error: 'Message not found' });
+    if (message.call_status) return reply.status(400).send({ error: 'Cannot delete a call message' });
     if (message.author_id !== request.userId) return reply.status(403).send({ error: 'Can only delete your own messages' });
+
+    const stored = await db
+      .selectFrom('attachments')
+      .select('storage_key')
+      .where('dm_message_id', '=', messageId)
+      .execute();
+    for (const att of stored) {
+      await removeStoredObject(att.storage_key).catch(() => {});
+    }
 
     const deleted = await db
       .deleteFrom('dm_messages')

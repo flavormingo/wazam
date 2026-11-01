@@ -436,6 +436,10 @@ async function migrate() {
 
   await sql`ALTER TABLE dm_messages DROP CONSTRAINT IF EXISTS dm_messages_author_id_fkey`.execute(db).catch(() => {});
   await sql`ALTER TABLE dm_messages ADD CONSTRAINT dm_messages_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL`.execute(db).catch(() => {});
+  await sql`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS call_status VARCHAR(12)`.execute(db);
+  await sql`ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS call_duration INTEGER`.execute(db);
+  await sql`ALTER TABLE attachments ADD COLUMN IF NOT EXISTS dm_message_id UUID REFERENCES dm_messages(id) ON DELETE CASCADE`.execute(db);
+  await sql`CREATE INDEX IF NOT EXISTS idx_attachments_dm_message ON attachments(dm_message_id)`.execute(db);
 
   await sql`ALTER TABLE memberships DROP CONSTRAINT IF EXISTS memberships_user_id_fkey`.execute(db).catch(() => {});
   await sql`ALTER TABLE memberships ADD CONSTRAINT memberships_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`.execute(db).catch(() => {});

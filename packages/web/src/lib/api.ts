@@ -164,8 +164,8 @@ export const api = {
     const qs = params.toString();
     return request<any[]>(`/api/dm/${dmChannelId}/messages${qs ? `?${qs}` : ''}`);
   },
-  sendDmMessage: (dmChannelId: string, content: string) =>
-    request<any>(`/api/dm/${dmChannelId}/messages`, { method: 'POST', body: JSON.stringify({ content }) }),
+  sendDmMessage: (dmChannelId: string, content: string, attachmentIds?: string[]) =>
+    request<any>(`/api/dm/${dmChannelId}/messages`, { method: 'POST', body: JSON.stringify({ content, attachment_ids: attachmentIds?.length ? attachmentIds : undefined }) }),
   editDmMessage: (dmChannelId: string, messageId: string, content: string) =>
     request<any>(`/api/dm/${dmChannelId}/messages/${messageId}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
   deleteDmMessage: (dmChannelId: string, messageId: string) =>

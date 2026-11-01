@@ -292,11 +292,20 @@ export interface ApiDmChannel {
   updated_at: string;
 }
 
+export type DmCallStatus = 'completed' | 'missed' | 'declined';
+
+export interface ApiDmCall {
+  status: DmCallStatus;
+  duration: number | null;
+}
+
 export interface ApiDmMessage {
   id: string;
   dm_channel_id: string;
   author: ApiUser;
   content: string;
+  call?: ApiDmCall | null;
+  attachments?: ApiAttachment[];
   reactions?: ApiReaction[];
   edited_at: string | null;
   deleted: boolean;

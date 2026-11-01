@@ -10,6 +10,7 @@ import type { ClientOp, ServerOp, PresenceStatus } from '@wazam/shared';
 import { getPublicUrl } from './storage.js';
 import { afterChannelMessage } from './routes/messages.js';
 import { sendPushForChannelMessage, retireOldOriginSubscriptions } from './push.js';
+import { getPendingIncomingCall } from './routes/calls.js';
 import type { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
 
@@ -249,6 +250,10 @@ export function setupWebSocket(app: FastifyInstance, db: Kysely<Database>, redis
     for (const clubId of client.subscribedClubs) {
       await redis.publish(`club:${clubId}`, JSON.stringify({ op: 'presence.update', d: { user_id: user.id, status: 'online' } }));
     }
+
+    getPendingIncomingCall(db, redis, user.id)
+      .then((pending) => { if (pending) send(ws, { op: 'call.incoming', d: pending }); })
+      .catch(() => {});
 
     ws.on('message', async (raw: Buffer) => {
       try {

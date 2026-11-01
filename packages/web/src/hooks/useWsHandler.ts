@@ -9,7 +9,7 @@ import { useFriendsStore } from '../stores/friends';
 import { useSectionsStore } from '../stores/sections';
 import { useCallStore } from '../stores/call';
 import { useVoiceStore } from '../stores/voice';
-import { useUnreadStore } from '../stores/unread';
+import { useUnreadStore, isDmUnread } from '../stores/unread';
 import { useAuthStore } from '../stores/auth';
 import { useClubsStore } from '../stores/clubs';
 import { useVoiceOccupancyStore } from '../stores/voiceOccupancy';
@@ -138,17 +138,21 @@ export function useWsHandler() {
         case 'presence.update':
           setStatus(op.d.user_id, op.d.status);
           break;
-        case 'dm.message.create':
+        case 'dm.message.create': {
+          const dmId = op.d.dm_channel_id;
+          const mine = op.d.author.id === useAuthStore.getState().user?.id;
+          const wasRead = !isDmUnread(dmId);
           addDmMessage(op.d);
-          useUnreadStore.getState().setDmLastMessage(op.d.dm_channel_id, op.d.created_at);
-          if (useDmsStore.getState().currentDmId === op.d.dm_channel_id) {
-            useUnreadStore.getState().markDmRead(op.d.dm_channel_id);
-          } else if (op.d.author.id === useAuthStore.getState().user?.id) {
-            useUnreadStore.getState().markDmRead(op.d.dm_channel_id);
+          useUnreadStore.getState().setDmLastMessage(dmId, op.d.created_at);
+          if (useDmsStore.getState().currentDmId === dmId || mine) {
+            useUnreadStore.getState().markDmRead(dmId);
+          } else if (op.d.call && op.d.call.status !== 'missed') {
+            if (wasRead) useUnreadStore.getState().markDmRead(dmId);
           } else {
             chimeIfVisible(playDmChime);
           }
           break;
+        }
         case 'dm.message.update':
           updateDmMessage(op.d);
           break;

@@ -6,10 +6,13 @@ import { useCallStore } from '../stores/call';
 import { useVoiceStore } from '../stores/voice';
 import { api } from '../lib/api';
 import { wsClient } from '../lib/ws';
-import { SendIcon, EditIcon, TrashIcon, PhoneIcon, ChevronLeftIcon, FaceSmileIcon } from './icons';
+import { SendIcon, EditIcon, TrashIcon, PhoneIcon, PhoneIncomeIcon, PhoneOutcomeIcon, PhoneXmarkIcon, ChevronLeftIcon, FaceSmileIcon, PaperclipIcon } from './icons';
 import { MuteButton } from './MuteButton';
 import { EmojiPicker } from './EmojiPicker';
 import { MessageReactions } from './MessageReactions';
+import { MessageAttachments } from './MessageAttachments';
+import { PendingFiles } from './PendingFiles';
+import { filterAttachable, uploadAttachments } from '../lib/attachments';
 import { toast } from '../stores/toast';
 import { formatMessageTime } from '../lib/time';
 import { formatMessage } from '../lib/formatMessage';
@@ -20,7 +23,7 @@ import { DMCallView } from './DMCallView';
 import { useModalStore } from '../stores/modal';
 import { useUnreadStore } from '../stores/unread';
 import { useMobile } from '../hooks/useMobile';
-import { VALENTINO_ID, type ServerOp } from '@wazam/shared';
+import { VALENTINO_ID, describeCall, type ServerOp } from '@wazam/shared';
 import './DMView.css';
 
 export function DMView() {
@@ -39,6 +42,7 @@ export function DMView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -48,6 +52,7 @@ export function DMView() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTypingSent = useRef(0);
   const isInitialLoad = useRef(true);
 
@@ -64,6 +69,7 @@ export function DMView() {
   useEffect(() => {
     if (dmChannelId) {
       isInitialLoad.current = true;
+      setPendingFiles([]);
       setCurrentDm(dmChannelId);
       fetchDmMessages(dmChannelId);
       useUnreadStore.getState().markDmRead(dmChannelId);
@@ -133,13 +139,22 @@ export function DMView() {
   const otherMember = isDirectChannel ? channel.members?.find((m: any) => m.id !== user?.id) : null;
 
   const handleSend = async () => {
-    if (sending || !input.trim() || !dmChannelId) return;
+    if (sending || (!input.trim() && !pendingFiles.length) || !dmChannelId) return;
     setSending(true);
     setSendError(null);
+    let attachmentIds: string[];
     try {
-      const msg = await api.sendDmMessage(dmChannelId, input.trim());
+      attachmentIds = await uploadAttachments(pendingFiles);
+    } catch {
+      setSendError('some attachments failed to upload');
+      setSending(false);
+      return;
+    }
+    try {
+      const msg = await api.sendDmMessage(dmChannelId, input.trim(), attachmentIds);
       addDmMessage(msg);
       setInput('');
+      setPendingFiles([]);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
         textareaRef.current.style.overflowY = 'hidden';
@@ -149,6 +164,28 @@ export function DMView() {
     } finally {
       setSending(false);
     }
+  };
+
+  const addFiles = (files: File[]) => {
+    const accepted = filterAttachable(files);
+    if (accepted.length) setPendingFiles((prev) => [...prev, ...accepted]);
+  };
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    addFiles(Array.from(e.dataTransfer.files));
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    addFiles(Array.from(e.target.files || []));
+    e.target.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const files = Array.from(e.clipboardData.files);
+    if (!files.length) return;
+    e.preventDefault();
+    addFiles(files);
   };
 
   const handleToggleReaction = (messageId: string, emoji: string) => {
@@ -217,6 +254,7 @@ export function DMView() {
 
 
   const valentinoMessageId = channelMessages.find((m: any) => m.author.id === VALENTINO_ID)?.id;
+  const lastCallId = channelMessages.filter((m: any) => m.call).at(-1)?.id;
 
   const groupedMessages: { isGroupStart: boolean; message: any }[] = [];
   for (let i = 0; i < channelMessages.length; i++) {
@@ -224,13 +262,38 @@ export function DMView() {
     const prev = channelMessages[i - 1];
     const isGroupStart =
       !prev ||
+      !!prev.call ||
+      !!msg.call ||
       prev.author.id !== msg.author.id ||
       new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() > 5 * 60 * 1000;
     groupedMessages.push({ isGroupStart, message: msg });
   }
 
+  const renderCall = (msg: any) => {
+    const mine = msg.author.id === user?.id;
+    const { status } = msg.call;
+    const tone = status === 'completed' ? 'completed' : status === 'missed' && !mine ? 'missed' : '';
+    const canCallBack = !mine && status !== 'completed' && msg.id === lastCallId && isDirectChannel && !isValentino;
+    return (
+      <div key={msg.id} className={`message call-event group-start ${tone}`}>
+        <span className="call-icon">
+          {status === 'declined' ? <PhoneXmarkIcon size={14} /> : mine ? <PhoneOutcomeIcon size={14} /> : <PhoneIncomeIcon size={14} />}
+        </span>
+        <div className="content">
+          <span className="call-label">{describeCall(msg.call, mine)}</span>
+          <span className="time">{formatMessageTime(msg.created_at)}</span>
+          {canCallBack && (
+            <button className="btn btn-ghost btn-sm" onClick={handleStartCall} disabled={voiceConnected || isOutgoingHere}>
+              call back
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="dm-view">
+    <div className="dm-view" onDrop={handleFileDrop} onDragOver={(e) => e.preventDefault()}>
       <div className="header">
         {mobile && <button className="mobile-back" onClick={() => navigate('/dm')} aria-label="back"><ChevronLeftIcon size={20} /></button>}
         {otherMember ? (
@@ -260,7 +323,7 @@ export function DMView() {
           <div className="messages" ref={messagesContainerRef} onScroll={handleScroll}>
             {loading && <div className="loading"><div className="loading-spinner" /></div>}
             <div className="list">
-              {groupedMessages.map(({ isGroupStart, message: msg }) => (
+              {groupedMessages.map(({ isGroupStart, message: msg }) => msg.call ? renderCall(msg) : (
                 <div
                   key={msg.id}
                   className={`message ${isGroupStart ? 'group-start' : 'group-cont'} ${reactionPickerId === msg.id ? 'menu-open' : ''}`}
@@ -298,6 +361,7 @@ export function DMView() {
                     ) : msg.content ? (
                       <div className="text">{formatMessage(msg.content)}{msg.edited_at && <span className="edited">(edited)</span>}</div>
                     ) : null}
+                    <MessageAttachments attachments={msg.attachments} />
                     <MessageReactions reactions={msg.reactions} onToggle={(e) => handleToggleReaction(msg.id, e)} />
                   </div>
                   {!editingId && (
@@ -353,29 +417,43 @@ export function DMView() {
             <div className="send-error">{sendError}</div>
           )}
 
+          <PendingFiles files={pendingFiles} onRemove={(i) => setPendingFiles((prev) => prev.filter((_, j) => j !== i))} />
+
           <div className="msg-input">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              hidden
+              onChange={handleFileSelect}
+            />
             <div className="input-wrap" data-tour="composer">
               <FormatToolbar
                 textareaRef={textareaRef}
                 value={input}
                 onChange={setInput}
                 leading={
-                  <div className="emoji-wrap">
-                    <button
-                      className="fmt-btn icon-btn"
-                      aria-label="emoji"
-                      onMouseDown={(e) => { e.stopPropagation(); setReactionPickerId(null); setShowComposerEmoji((v) => !v); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReactionPickerId(null); setShowComposerEmoji((v) => !v); } }}
-                    >
-                      <FaceSmileIcon size={16} />
+                  <>
+                    <button className="fmt-btn icon-btn" onClick={() => fileInputRef.current?.click()} aria-label="attach">
+                      <PaperclipIcon size={16} />
                     </button>
-                    {showComposerEmoji && (
-                      <EmojiPicker
-                        onSelect={(e) => { insertEmoji(e); setShowComposerEmoji(false); }}
-                        onClose={() => setShowComposerEmoji(false)}
-                      />
-                    )}
-                  </div>
+                    <div className="emoji-wrap">
+                      <button
+                        className="fmt-btn icon-btn"
+                        aria-label="emoji"
+                        onMouseDown={(e) => { e.stopPropagation(); setReactionPickerId(null); setShowComposerEmoji((v) => !v); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReactionPickerId(null); setShowComposerEmoji((v) => !v); } }}
+                      >
+                        <FaceSmileIcon size={16} />
+                      </button>
+                      {showComposerEmoji && (
+                        <EmojiPicker
+                          onSelect={(e) => { insertEmoji(e); setShowComposerEmoji(false); }}
+                          onClose={() => setShowComposerEmoji(false)}
+                        />
+                      )}
+                    </div>
+                  </>
                 }
               />
               <div className="input-row">
@@ -391,9 +469,10 @@ export function DMView() {
                     el.style.overflowY = el.scrollHeight > 200 ? 'auto' : 'hidden';
                   }}
                   onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
                   rows={1}
                 />
-                <button className="icon-btn send" onClick={handleSend} disabled={sending || !input.trim()} aria-label="send message">
+                <button className="icon-btn send" onClick={handleSend} disabled={sending || (!input.trim() && !pendingFiles.length)} aria-label="send message">
                   <SendIcon size={20} />
                 </button>
               </div>

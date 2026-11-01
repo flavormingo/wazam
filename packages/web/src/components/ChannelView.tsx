@@ -3,18 +3,20 @@ import { useParams, useNavigate } from 'react-router';
 import { useMessagesStore } from '../stores/messages';
 import { useChannelsStore } from '../stores/channels';
 import { useAuthStore } from '../stores/auth';
-import { api, uploadToPresigned } from '../lib/api';
+import { api } from '../lib/api';
+import { filterAttachable, uploadAttachments } from '../lib/attachments';
 import { wsClient } from '../lib/ws';
-import { HashIcon, PaperclipIcon, SendIcon, EditIcon, TrashIcon, ChevronLeftIcon, FaceSmileIcon, XIcon } from './icons';
+import { HashIcon, PaperclipIcon, SendIcon, EditIcon, TrashIcon, ChevronLeftIcon, FaceSmileIcon } from './icons';
 import { formatMessageTime } from '../lib/time';
 import { formatMessage } from '../lib/formatMessage';
 import { scrollBehavior } from '../lib/preferences';
-import { openLightbox } from '../stores/lightbox';
 import { toast } from '../stores/toast';
 import { WormMark } from './WormMark';
 import { MuteButton } from './MuteButton';
 import { EmojiPicker } from './EmojiPicker';
 import { MessageReactions } from './MessageReactions';
+import { MessageAttachments } from './MessageAttachments';
+import { PendingFiles } from './PendingFiles';
 import { FormatToolbar } from './FormatToolbar';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useModalStore } from '../stores/modal';
@@ -61,6 +63,7 @@ export function ChannelView({ clubId }: Props) {
   useEffect(() => {
     if (channelId) {
       isInitialLoad.current = true;
+      setPendingFiles([]);
       fetchMessages(channelId);
       wsClient.subscribeChannel(channelId);
       useUnreadStore.getState().markChannelRead(channelId);
@@ -117,24 +120,10 @@ export function ChannelView({ clubId }: Props) {
     setSending(true);
 
     setSendError(null);
-    let attachmentIds: string[] = [];
-    let uploadFailed = false;
-
-    for (const file of pendingFiles) {
-      try {
-        const presign = await api.presignUpload({
-          filename: file.name,
-          content_type: file.type,
-          size: file.size,
-        });
-        await uploadToPresigned(presign, file);
-        attachmentIds.push(presign.attachment_id);
-      } catch {
-        uploadFailed = true;
-      }
-    }
-
-    if (uploadFailed) {
+    let attachmentIds: string[];
+    try {
+      attachmentIds = await uploadAttachments(pendingFiles);
+    } catch {
       setSendError('some attachments failed to upload');
       setSending(false);
       return;
@@ -220,16 +209,26 @@ export function ChannelView({ clubId }: Props) {
     }
   };
 
+  const addFiles = (files: File[]) => {
+    const accepted = filterAttachable(files);
+    if (accepted.length) setPendingFiles((prev) => [...prev, ...accepted]);
+  };
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files);
-    setPendingFiles((prev) => [...prev, ...files]);
+    addFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setPendingFiles((prev) => [...prev, ...files]);
+    addFiles(Array.from(e.target.files || []));
     e.target.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const files = Array.from(e.clipboardData.files);
+    if (!files.length) return;
+    e.preventDefault();
+    addFiles(files);
   };
 
 
@@ -301,28 +300,7 @@ export function ChannelView({ clubId }: Props) {
                 ) : msg.content ? (
                   <div className="text">{formatMessage(msg.content)}{msg.edited_at && <span className="edited">(edited)</span>}</div>
                 ) : null}
-                {msg.attachments?.length > 0 && (
-                  <div className="attachments">
-                    {msg.attachments.map((att: any) => (
-                      <div key={att.id}>
-                        {att.content_type.startsWith('image/') ? (
-                          <img
-                            src={att.url}
-                            alt={att.filename}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => openLightbox(att.url, att.filename)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(att.url, att.filename); } }}
-                          />
-                        ) : (
-                          <a href={att.url} target="_blank" rel="noopener noreferrer">
-                            {att.filename} ({(att.size / 1024).toFixed(1)}KB)
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <MessageAttachments attachments={msg.attachments} />
                 <MessageReactions reactions={msg.reactions} onToggle={(e) => handleToggleReaction(msg.id, e)} />
               </div>
               {!editingId && (
@@ -380,16 +358,7 @@ export function ChannelView({ clubId }: Props) {
         <div className="send-error">{sendError}</div>
       )}
 
-      {pendingFiles.length > 0 && (
-        <div className="pending-files">
-          {pendingFiles.map((f, i) => (
-            <div key={`${f.name}-${f.size}-${f.lastModified}`} className="file">
-              <span>{f.name}</span>
-              <button aria-label="remove file" onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}><XIcon size={10} /></button>
-            </div>
-          ))}
-        </div>
-      )}
+      <PendingFiles files={pendingFiles} onRemove={(i) => setPendingFiles((prev) => prev.filter((_, j) => j !== i))} />
 
       <div className="msg-input">
         <input
@@ -441,6 +410,7 @@ export function ChannelView({ clubId }: Props) {
                 el.style.overflowY = el.scrollHeight > 200 ? 'auto' : 'hidden';
               }}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               rows={1}
             />
             <button className="icon-btn send" onClick={handleSend} disabled={sending || (!input.trim() && !pendingFiles.length)} aria-label="send message">

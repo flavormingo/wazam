@@ -206,6 +206,7 @@ export function messageRoutes(app: FastifyInstance, db: Kysely<Database>, redis:
         .set({ message_id: message.id })
         .where('id', 'in', attachment_ids)
         .where('message_id', 'is', null)
+        .where('dm_message_id', 'is', null)
         .execute();
     }
 

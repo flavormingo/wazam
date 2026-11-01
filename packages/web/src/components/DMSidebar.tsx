@@ -11,6 +11,7 @@ import { useModalStore } from '../stores/modal';
 import { useFriendsStore } from '../stores/friends';
 import { useUnreadStore, isDmUnread } from '../stores/unread';
 import { formatShortTime } from '../lib/time';
+import { describeAttachments, describeCall } from '@wazam/shared';
 import './DMSidebar.css';
 
 export function DMSidebar() {
@@ -104,8 +105,9 @@ export function DMSidebar() {
 
   const formatPreview = (msg: any) => {
     if (!msg) return '';
+    if (msg.call) return describeCall(msg.call, msg.author?.id === user?.id);
     const author = msg.author?.name || '';
-    const content = msg.deleted ? '[deleted]' : msg.content;
+    const content = msg.deleted ? '[deleted]' : msg.content || (msg.attachments?.length ? describeAttachments(msg.attachments) : '');
     const text = content.length > 40 ? content.slice(0, 40) + '...' : content;
     return `${author}: ${text}`;
   };

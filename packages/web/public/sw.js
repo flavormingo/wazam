@@ -23,16 +23,28 @@ self.addEventListener('push', (event) => {
     payload = {};
   }
   const title = payload.title || 'wazam';
+  const isCall = payload.type === 'call';
   const options = {
     body: payload.body || '',
     icon: '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
     tag: payload.tag || undefined,
     renotify: !!payload.tag,
-    data: { url: payload.url || '/' },
+    vibrate: isCall ? [300, 150, 300, 150, 300] : undefined,
+    data: { url: payload.url || '/', call: isCall },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  const shown = self.registration.showNotification(title, options);
+  event.waitUntil(isCall ? shown.then(() => expireCallNotification(options.tag)) : shown);
 });
+
+function expireCallNotification(tag) {
+  return new Promise((resolve) => setTimeout(resolve, 35000)).then(async () => {
+    const list = await self.registration.getNotifications(tag ? { tag } : undefined);
+    for (const n of list) {
+      if (n.data && n.data.call) n.close();
+    }
+  });
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

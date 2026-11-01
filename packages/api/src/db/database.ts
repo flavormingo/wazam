@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { Kysely, PostgresDialect } from 'kysely';
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from 'kysely';
+import type { DmCallStatus } from '@wazam/shared';
 
 export interface UsersTable {
   id: Generated<string>;
@@ -103,6 +104,7 @@ export interface MessagesTable {
 export interface AttachmentsTable {
   id: Generated<string>;
   message_id: string | null;
+  dm_message_id: string | null;
   filename: string;
   content_type: string;
   size: number;
@@ -214,6 +216,8 @@ export interface DmMessagesTable {
   dm_channel_id: string;
   author_id: string;
   content: string;
+  call_status: DmCallStatus | null;
+  call_duration: number | null;
   edited_at: Date | null;
   deleted: Generated<boolean>;
   created_at: Generated<Date>;
