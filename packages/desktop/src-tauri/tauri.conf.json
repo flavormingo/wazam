@@ -1,19 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/nickkd/tauri/dev/crates/tauri-config-schema/schema.json",
-  "productName": "wazup",
+  "productName": "wazam",
   "version": "0.0.1",
-  "identifier": "com.wazup.app",
+  "identifier": "com.wazam.app",
   "build": {
     "frontendDist": "../../../packages/web/dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
-    "beforeBuildCommand": "pnpm --filter @wazup/web build"
+    "beforeBuildCommand": "pnpm --filter @wazam/web build"
   },
   "app": {
-    "title": "wazup",
+    "title": "wazam",
     "windows": [
       {
-        "title": "wazup",
+        "title": "wazam",
         "width": 1280,
         "height": 800,
         "minWidth": 940,

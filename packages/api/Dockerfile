@@ -12,8 +12,8 @@ COPY packages/shared/ packages/shared/
 COPY packages/api/ packages/api/
 COPY tsconfig.json ./
 
-RUN pnpm --filter @wazup/shared build
-RUN pnpm --filter @wazup/api build
+RUN pnpm --filter @wazam/shared build
+RUN pnpm --filter @wazam/api build
 
 FROM node:22-alpine
 RUN corepack enable && corepack prepare pnpm@10 --activate

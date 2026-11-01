@@ -84,7 +84,7 @@ export function MainLayout() {
 
   useEffect(() => {
     const count = getTotalUnreadCount();
-    document.title = count > 0 ? `(${count}) wazup` : 'wazup';
+    document.title = count > 0 ? `(${count}) wazam` : 'wazam';
   }, [channelLastMessage, channelLastRead, dmLastMessage, dmLastRead]);
 
   const currentChannelId = useChannelsStore((s) => s.currentChannelId);
@@ -199,7 +199,7 @@ function DmContent() {
         <div className="empty empty-hero">
           <WormMark size={76} />
           <h2>your messages</h2>
-          <p>pick a conversation, or start a new one to say wazup</p>
+          <p>pick a conversation, or start a new one to say wazam</p>
         </div>
       )}
     </>

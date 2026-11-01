@@ -4,7 +4,7 @@ import type Redis from 'ioredis';
 import type { Database } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { computePermissions } from '../permissions.js';
-import { Permissions, hasPermission, DEFAULT_PERMISSIONS } from '@wazup/shared';
+import { Permissions, hasPermission, DEFAULT_PERMISSIONS } from '@wazam/shared';
 import { getPublicUrl, getPresignedPost } from '../storage.js';
 import { config } from '../config.js';
 import { nanoid } from 'nanoid';

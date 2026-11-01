@@ -5,7 +5,7 @@ import { createAuthMiddleware } from '../middleware.js';
 import { getPresignedPost, getPublicUrl } from '../storage.js';
 import { config } from '../config.js';
 import { nanoid } from 'nanoid';
-import { VALENTINO_ID } from '@wazup/shared';
+import { VALENTINO_ID } from '@wazam/shared';
 
 const ALLOWED_CONNECTIONS = [
   'dribbble', 'facebook', 'github', 'instagram', 'linkedin', 'medium',

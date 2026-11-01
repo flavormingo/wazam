@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
   } catch (e) {
     payload = {};
   }
-  const title = payload.title || 'wazup';
+  const title = payload.title || 'wazam';
   const options = {
     body: payload.body || '',
     icon: '/android-chrome-192x192.png',

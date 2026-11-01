@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PresenceStatus } from '@wazup/shared';
+import type { PresenceStatus } from '@wazam/shared';
 
 interface PresenceState {
   statuses: Record<string, PresenceStatus>;

@@ -5,11 +5,11 @@ import type Redis from 'ioredis';
 import { auth } from './auth.js';
 import { fromNodeHeaders } from 'better-auth/node';
 import { computePermissions } from './permissions.js';
-import { Permissions, hasPermission } from '@wazup/shared';
-import type { ClientOp, ServerOp, PresenceStatus } from '@wazup/shared';
+import { Permissions, hasPermission } from '@wazam/shared';
+import type { ClientOp, ServerOp, PresenceStatus } from '@wazam/shared';
 import { getPublicUrl } from './storage.js';
 import { afterChannelMessage } from './routes/messages.js';
-import { sendPushForChannelMessage } from './push.js';
+import { sendPushForChannelMessage, retireOldOriginSubscriptions } from './push.js';
 import type { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
 
@@ -218,6 +218,7 @@ export function setupWebSocket(app: FastifyInstance, db: Kysely<Database>, redis
     userSessions.set(user.id, sessions);
 
     send(ws, { op: 'ready', d: { user_id: user.id, session_id: sessionId } });
+    retireOldOriginSubscriptions(db, user.id).catch(() => {});
 
     const memberships = await db
       .selectFrom('memberships')

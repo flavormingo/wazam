@@ -20,7 +20,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { useModalStore } from '../stores/modal';
 import { useUnreadStore } from '../stores/unread';
 import { useMobile } from '../hooks/useMobile';
-import type { ServerOp } from '@wazup/shared';
+import type { ServerOp } from '@wazam/shared';
 import './ChannelView.css';
 
 const EMPTY_CHANNELS: any[] = [];
@@ -262,7 +262,7 @@ export function ChannelView({ clubId }: Props) {
           <div className="channel-empty empty-hero">
             <WormMark size={72} />
             <h2>it's quiet in here</h2>
-            <p>be the first to say wazup in #{channel?.name}</p>
+            <p>be the first to say wazam in #{channel?.name}</p>
           </div>
         )}
 

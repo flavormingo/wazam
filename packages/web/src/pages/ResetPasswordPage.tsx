@@ -38,7 +38,7 @@ export function ResetPasswordPage() {
     return (
       <div className="login-page">
         <div className="card">
-          <h1 className="logo">wazup</h1>
+          <h1 className="logo">wazam</h1>
           <div className="verify">
             <p>invalid or missing reset token.</p>
             <button className="back" onClick={() => navigate('/login')}>
@@ -54,7 +54,7 @@ export function ResetPasswordPage() {
     return (
       <div className="login-page">
         <div className="card">
-          <h1 className="logo">wazup</h1>
+          <h1 className="logo">wazam</h1>
           <div className="verify">
             <h2>password reset</h2>
             <p>your password has been updated.</p>
@@ -74,7 +74,7 @@ export function ResetPasswordPage() {
   return (
     <div className="login-page">
       <div className="card">
-        <h1 className="logo">wazup</h1>
+        <h1 className="logo">wazam</h1>
         <p className="desc">enter your new password.</p>
         <form onSubmit={handleSubmit}>
           <input

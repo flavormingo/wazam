@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { auth } from '../auth.js';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { Kysely } from 'kysely';
-import { VALENTINO_ID } from '@wazup/shared';
+import { VALENTINO_ID } from '@wazam/shared';
 import type { Database } from '../db/database.js';
 import { getPublicUrl } from '../storage.js';
 

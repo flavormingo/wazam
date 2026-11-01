@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
-import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_AVATAR_KEY } from '@wazup/shared';
+import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_AVATAR_KEY } from '@wazam/shared';
 import type { Database, FriendshipRow } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { getPublicUrl } from '../storage.js';

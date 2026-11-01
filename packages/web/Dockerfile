@@ -12,8 +12,8 @@ COPY packages/shared/ packages/shared/
 COPY packages/web/ packages/web/
 COPY tsconfig.json ./
 
-RUN pnpm --filter @wazup/shared build
-RUN pnpm --filter @wazup/web build
+RUN pnpm --filter @wazam/shared build
+RUN pnpm --filter @wazam/web build
 
 FROM nginx:alpine
 COPY --from=build /app/packages/web/dist /usr/share/nginx/html

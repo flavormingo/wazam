@@ -21,13 +21,14 @@ export function pushRoutes(app: FastifyInstance, db: Kysely<Database>, _redis: R
       return reply.status(400).send({ error: 'Invalid subscription' });
     }
     await sql`
-      INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, ua, failure_count, last_seen_at)
-      VALUES (${request.userId!}, ${endpoint}, ${keys.p256dh}, ${keys.auth}, ${ua ?? null}, 0, now())
+      INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, ua, origin, failure_count, last_seen_at)
+      VALUES (${request.userId!}, ${endpoint}, ${keys.p256dh}, ${keys.auth}, ${ua ?? null}, ${config.webUrl}, 0, now())
       ON CONFLICT (endpoint) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         p256dh = EXCLUDED.p256dh,
         auth = EXCLUDED.auth,
         ua = EXCLUDED.ua,
+        origin = EXCLUDED.origin,
         failure_count = 0,
         last_seen_at = now()
     `.execute(db);

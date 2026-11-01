@@ -53,7 +53,7 @@ export function InvitePage() {
     return (
       <div className="login-page">
         <div className="card">
-          <h1 className="logo">wazup</h1>
+          <h1 className="logo">wazam</h1>
           <div className="verify">
             <p style={{ color: 'var(--fg-danger)' }}>{error}</p>
           </div>
@@ -74,7 +74,7 @@ export function InvitePage() {
   return (
     <div className="login-page">
       <div className="card">
-        <h1 className="logo">wazup</h1>
+        <h1 className="logo">wazam</h1>
         <div className="verify">
           <p>you've been invited to join</p>
           <h2 style={{ fontSize: '1.5rem', marginBottom: 'var(--space-sm)' }}>{invite.club.name}</h2>

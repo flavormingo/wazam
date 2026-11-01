@@ -6,7 +6,7 @@ import { config } from './config.js';
 import { createDb } from './db/database.js';
 import { createRedis, createRedisSub } from './redis.js';
 import { createMinioClient, ensureBucket } from './storage.js';
-import { VALENTINO_AVATAR_KEY, VALENTINO_AVATAR_SVG } from '@wazup/shared';
+import { VALENTINO_AVATAR_KEY, VALENTINO_AVATAR_SVG } from '@wazam/shared';
 import { authRoutes } from './routes/auth.js';
 import { clubRoutes } from './routes/clubs.js';
 import { channelRoutes } from './routes/channels.js';

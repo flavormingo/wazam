@@ -1,6 +1,6 @@
 import type { Kysely } from 'kysely';
 import type { Database } from './db/database.js';
-import { ALL_PERMISSIONS, hasPermission } from '@wazup/shared';
+import { ALL_PERMISSIONS, hasPermission } from '@wazam/shared';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 export async function computePermissions(

@@ -20,7 +20,7 @@ import { DMCallView } from './DMCallView';
 import { useModalStore } from '../stores/modal';
 import { useUnreadStore } from '../stores/unread';
 import { useMobile } from '../hooks/useMobile';
-import { VALENTINO_ID, type ServerOp } from '@wazup/shared';
+import { VALENTINO_ID, type ServerOp } from '@wazam/shared';
 import './DMView.css';
 
 export function DMView() {

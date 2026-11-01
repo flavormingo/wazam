@@ -2,9 +2,10 @@ import 'dotenv/config';
 import pg from 'pg';
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { nanoid } from 'nanoid';
-import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_DISPLAY_NAME, VALENTINO_AVATAR_KEY } from '@wazup/shared';
+import { VALENTINO_ID, VALENTINO_USERNAME, VALENTINO_DISPLAY_NAME, VALENTINO_AVATAR_KEY } from '@wazam/shared';
 import type { Database } from './database.js';
 import { befriendValentino } from '../valentino.js';
+import { config } from '../config.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -576,6 +577,8 @@ async function migrate() {
   `.execute(db);
 
   await sql`CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)`.execute(db);
+  await sql`ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS origin TEXT`.execute(db);
+  await sql`UPDATE push_subscriptions SET origin = ${config.webUrl} WHERE origin IS NULL`.execute(db);
 
   await sql`
     CREATE TABLE IF NOT EXISTS notification_settings (
@@ -605,18 +608,19 @@ async function migrate() {
     INSERT INTO users (id, email, email_verified, display_name, username, "displayUsername", avatar_key, status_emoji, status_text, bio, friend_privacy)
     VALUES (
       ${VALENTINO_ID},
-      ${'valentino@wazup.chat'},
+      ${'valentino@waz.am'},
       true,
       ${VALENTINO_DISPLAY_NAME},
       ${VALENTINO_USERNAME},
       ${VALENTINO_DISPLAY_NAME},
       ${VALENTINO_AVATAR_KEY},
       ${'🐾'},
-      ${'say wazup'},
-      ${"hi, i'm valentino — your first friend on wazup. i'll show you around."},
+      ${'say wazam'},
+      ${"hi, i'm valentino — your first friend on wazam. i'll show you around."},
       'everyone'
     )
     ON CONFLICT (id) DO UPDATE SET
+      email = EXCLUDED.email,
       email_verified = true,
       display_name = EXCLUDED.display_name,
       username = EXCLUDED.username,

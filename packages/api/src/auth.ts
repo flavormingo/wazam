@@ -3,7 +3,7 @@ import { username } from 'better-auth/plugins';
 import pg from 'pg';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Resend } from 'resend';
-import { VALENTINO_ID } from '@wazup/shared';
+import { VALENTINO_ID } from '@wazam/shared';
 import { config } from './config.js';
 import type { Database } from './db/database.js';
 import { befriendValentino } from './valentino.js';
@@ -24,7 +24,7 @@ function emailTemplate(title: string, body: string) {
 <table width="480" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:40px 36px">
 <tr><td>
 <div style="margin-bottom:32px">
-<span style="font-size:24px;font-weight:800;color:#FFC72C;letter-spacing:-0.5px">wazup</span>
+<span style="font-size:24px;font-weight:800;color:#FFC72C;letter-spacing:-0.5px">wazam</span>
 </div>
 <h2 style="margin:0 0 12px;font-size:18px;font-weight:600;color:#f0f0f5;font-family:${FONT}">${title}</h2>
 ${body}
@@ -32,7 +32,7 @@ ${body}
 <p style="margin:0;font-size:12px;color:#5a5a70;line-height:1.5">If you didn't request this, you can safely ignore this email.</p>
 </div>
 </td></tr></table>
-<p style="margin:20px 0 0;font-size:11px;color:#3a3a4e;font-family:${FONT}">wazup.chat</p>
+<p style="margin:20px 0 0;font-size:11px;color:#3a3a4e;font-family:${FONT}">${new URL(config.webUrl).host}</p>
 </td></tr></table>
 </body></html>`;
 }
@@ -40,7 +40,7 @@ ${body}
 async function sendEmail(to: string, subject: string, html: string) {
   console.log(`Sending email to=${to} subject="${subject}"`);
   const { data, error } = await resend.emails.send({
-    from: 'wazup <noreply@wazup.chat>',
+    from: 'wazam <noreply@wazup.chat>',
     to,
     subject,
     html,
@@ -62,7 +62,7 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     async sendResetPassword({ user, url }: { user: { email: string }; url: string }) {
       await sendEmail(user.email, 'Reset your password', emailTemplate('Reset your password', `
-<p style="margin:0 0 24px;font-size:14px;color:#a0a0b8;line-height:1.6;font-family:${FONT}">We received a request to reset the password for your wazup account. Click the button below to choose a new password.</p>
+<p style="margin:0 0 24px;font-size:14px;color:#a0a0b8;line-height:1.6;font-family:${FONT}">We received a request to reset the password for your wazam account. Click the button below to choose a new password.</p>
 <a href="${url}" style="display:inline-block;padding:12px 28px;background:#FFC72C;color:#0B1128;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;font-family:${FONT}">Reset Password</a>
 <p style="margin:16px 0 0;font-size:12px;color:#5a5a70;word-break:break-all;font-family:${FONT}">Or copy this link: ${url}</p>`));
     },
@@ -70,8 +70,8 @@ export const auth = betterAuth({
   emailVerification: {
     autoSignInAfterVerification: true,
     async sendVerificationEmail({ user, url }) {
-      await sendEmail(user.email, 'Verify your wazup account', emailTemplate('Verify your email', `
-<p style="margin:0 0 24px;font-size:14px;color:#a0a0b8;line-height:1.6;font-family:${FONT}">Please verify this email address to confirm it belongs to your wazup account.</p>
+      await sendEmail(user.email, 'Verify your wazam account', emailTemplate('Verify your email', `
+<p style="margin:0 0 24px;font-size:14px;color:#a0a0b8;line-height:1.6;font-family:${FONT}">Please verify this email address to confirm it belongs to your wazam account.</p>
 <a href="${url}" style="display:inline-block;padding:12px 28px;background:#FFC72C;color:#0B1128;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;font-family:${FONT}">Verify Email</a>
 <p style="margin:16px 0 0;font-size:12px;color:#5a5a70;word-break:break-all;font-family:${FONT}">Or copy this link: ${url}</p>`));
     },

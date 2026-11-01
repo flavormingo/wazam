@@ -44,9 +44,9 @@ export function reportRoutes(app: FastifyInstance, db: Kysely<Database>) {
     ].join('');
 
     const { error } = await resend.emails.send({
-      from: 'wazup <noreply@wazup.chat>',
+      from: 'wazam <noreply@wazup.chat>',
       to: 'yo@wazup.chat',
-      subject: `[wazup] ${subject}`,
+      subject: `[wazam] ${subject}`,
       html,
     });
 

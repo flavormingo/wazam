@@ -1,4 +1,4 @@
-import type { ClientOp, ServerOp } from '@wazup/shared';
+import type { ClientOp, ServerOp } from '@wazam/shared';
 
 type EventHandler = (op: ServerOp) => void;
 

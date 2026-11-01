@@ -1,5 +1,5 @@
 import { sql, type Kysely } from 'kysely';
-import { VALENTINO_ID, VALENTINO_WELCOME } from '@wazup/shared';
+import { VALENTINO_ID, VALENTINO_WELCOME } from '@wazam/shared';
 import type { Database } from './db/database.js';
 
 export async function befriendValentino(db: Kysely<Database>, userId: string) {

@@ -225,7 +225,7 @@ export function LoginPage() {
       <div className="login-page">
         <LoginFlies />
         <div className="card">
-          <h1 className="logo" onClick={handleLogo}>wazup</h1>
+          <h1 className="logo" onClick={handleLogo}>wazam</h1>
           <div className="verify">
             <h2>check your email</h2>
             {email ? (
@@ -269,7 +269,7 @@ export function LoginPage() {
       <div className="login-page">
         <LoginFlies />
         <div className="card">
-          <h1 className="logo" onClick={handleLogo}>wazup</h1>
+          <h1 className="logo" onClick={handleLogo}>wazam</h1>
           <div className="verify">
             <h2>check your email</h2>
             <p>
@@ -291,7 +291,7 @@ export function LoginPage() {
     <div className="login-page">
       <LoginFlies />
       <div className="card">
-        <h1 className="logo" onClick={handleLogo}>wazup</h1>
+        <h1 className="logo" onClick={handleLogo}>wazam</h1>
         {mode !== 'forgot' && (
           <div className="tabs">
             <button

@@ -232,6 +232,7 @@ export interface PushSubscriptionsTable {
   p256dh: string;
   auth: string;
   ua: string | null;
+  origin: string | null;
   failure_count: Generated<number>;
   last_seen_at: ColumnType<Date, Date | undefined, Date>;
   created_at: Generated<Date>;

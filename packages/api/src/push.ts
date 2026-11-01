@@ -1,7 +1,7 @@
 import webpush from 'web-push';
 import type { Kysely } from 'kysely';
 import type Redis from 'ioredis';
-import type { ApiMessage, ApiDmMessage } from '@wazup/shared';
+import type { ApiMessage, ApiDmMessage } from '@wazam/shared';
 import type { Database } from './db/database.js';
 import { config } from './config.js';
 
@@ -19,6 +19,14 @@ export function initPush() {
 
 export function pushEnabled() {
   return enabled;
+}
+
+export async function retireOldOriginSubscriptions(db: Kysely<Database>, userId: string) {
+  await db
+    .deleteFrom('push_subscriptions')
+    .where('user_id', '=', userId)
+    .where('origin', '<>', config.webUrl)
+    .execute();
 }
 
 interface PushPayload {

@@ -1,4 +1,4 @@
-import { VALENTINO_AVATAR_SVG } from '@wazup/shared';
+import { VALENTINO_AVATAR_SVG } from '@wazam/shared';
 
 const SRC = `data:image/svg+xml,${encodeURIComponent(VALENTINO_AVATAR_SVG)}`;
 

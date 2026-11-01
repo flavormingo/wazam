@@ -15,7 +15,7 @@ import { useClubsStore } from '../stores/clubs';
 import { useVoiceOccupancyStore } from '../stores/voiceOccupancy';
 import { playMessageChime, playDmChime, startRing, stopRing, playJoinChime } from '../lib/sounds';
 import { api } from '../lib/api';
-import type { ServerOp } from '@wazup/shared';
+import type { ServerOp } from '@wazam/shared';
 
 function chimeIfVisible(fn: () => void) {
   if (document.visibilityState === 'visible') fn();

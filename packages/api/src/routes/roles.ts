@@ -3,7 +3,7 @@ import type { Kysely } from 'kysely';
 import type { Database } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { computePermissions } from '../permissions.js';
-import { Permissions, hasPermission, ALL_PERMISSIONS } from '@wazup/shared';
+import { Permissions, hasPermission, ALL_PERMISSIONS } from '@wazam/shared';
 
 export function roleRoutes(app: FastifyInstance, db: Kysely<Database>) {
   const requireAuth = createAuthMiddleware(db);

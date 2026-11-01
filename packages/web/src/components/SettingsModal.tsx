@@ -462,10 +462,10 @@ function NotificationsSection() {
         <div className="title overline">push notifications</div>
         {state === 'unsupported' && <div className="coming-soon">not supported in this browser</div>}
         {state === 'needs-install' && (
-          <div className="field-value">add wazup to your home screen (Share → Add to Home Screen), then open it from the icon to turn on notifications</div>
+          <div className="field-value">add wazam to your home screen (Share → Add to Home Screen), then open it from the icon to turn on notifications</div>
         )}
         {state === 'denied' && (
-          <div className="field-value">notifications are blocked — enable them for wazup in your browser or OS settings, then reload</div>
+          <div className="field-value">notifications are blocked — enable them for wazam in your browser or OS settings, then reload</div>
         )}
         {(state === 'loading' || state === 'on' || state === 'off') && (
           <div className="field">

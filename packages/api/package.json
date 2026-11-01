@@ -1,5 +1,5 @@
 {
-  "name": "@wazup/api",
+  "name": "@wazam/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "@fastify/cors": "^10.0.2",
     "@fastify/multipart": "^9.0.3",
     "@fastify/websocket": "^11.0.2",
-    "@wazup/shared": "workspace:*",
+    "@wazam/shared": "workspace:*",
     "better-auth": "^1.5.1",
     "dotenv": "^16.5.0",
     "fastify": "^5.2.1",

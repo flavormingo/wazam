@@ -105,7 +105,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@wazup.chat}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@waz.am}
       API_URL: https://${DOMAIN:-localhost}
       WEB_URL: https://${DOMAIN:-localhost}
       NODE_ENV: production

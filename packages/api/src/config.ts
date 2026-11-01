@@ -43,5 +43,5 @@ export const config = {
 
   vapidPublicKey: optional('VAPID_PUBLIC_KEY', ''),
   vapidPrivateKey: optional('VAPID_PRIVATE_KEY', ''),
-  vapidSubject: optional('VAPID_SUBJECT', 'mailto:admin@wazup.chat'),
+  vapidSubject: optional('VAPID_SUBJECT', 'mailto:admin@waz.am'),
 } as const;

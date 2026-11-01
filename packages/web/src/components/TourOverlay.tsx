@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router';
-import { VALENTINO_ID } from '@wazup/shared';
+import { VALENTINO_ID } from '@wazam/shared';
 import { useTourStore } from '../stores/tour';
 import { useDmsStore } from '../stores/dms';
 import { setTourSeen } from '../lib/preferences';
@@ -39,7 +39,7 @@ const RING_MAX = 64;
 const TAIL_MIN = 22;
 
 const STEPS: Step[] = [
-  { key: 'intro', title: 'welcome!', body: "hi! i'm valentino, your first friend on wazup. let me give you a quick tour", cta: 'show me around' },
+  { key: 'intro', title: 'welcome!', body: "hi! i'm valentino, your first friend on wazam. let me give you a quick tour", cta: 'show me around' },
   { key: 'clubs', target: 'create-club', side: 'right', body: 'clubs are little hangouts for your people. tap the + to create your own' },
   { key: 'home', target: 'home', side: 'right', body: 'this bubble is home base. you can directly call and message your friends here' },
   { key: 'friends', target: 'friends', body: 'add friends by name up here. you can message and call them or invite them to a club once they accept' },

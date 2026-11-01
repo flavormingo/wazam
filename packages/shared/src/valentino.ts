@@ -3,7 +3,7 @@ export const VALENTINO_USERNAME = 'valentino';
 export const VALENTINO_DISPLAY_NAME = 'Valentino';
 export const VALENTINO_AVATAR_KEY = 'system/valentino.svg';
 
-export const VALENTINO_WELCOME = `yo! welcome to wazup
+export const VALENTINO_WELCOME = `yo! welcome to wazam
 
 i'm valentino, your first friend around here. these are your direct messages. tap the + to start a club where you can hang out with friends. feel free to explore, and just head to settings if you ever want a tour`;
 

@@ -92,7 +92,7 @@ export function EditClubModal() {
 
         <div className="field-label overline">club url</div>
         <div className="slug-row">
-          <span className="slug-prefix">wazup.chat/club/</span>
+          <span className="slug-prefix">{window.location.host}/club/</span>
           <input
             className="slug-input"
             value={slug}

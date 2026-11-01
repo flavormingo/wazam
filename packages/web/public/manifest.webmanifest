@@ -1,6 +1,6 @@
 {
-  "name": "wazup",
-  "short_name": "wazup",
+  "name": "wazam",
+  "short_name": "wazam",
   "description": "digital social clubs for cool cats",
   "start_url": "/",
   "display": "standalone",

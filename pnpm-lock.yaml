@@ -29,7 +29,7 @@ importers:
       '@fastify/websocket':
         specifier: ^11.0.2
         version: 11.2.0
-      '@wazup/shared':
+      '@wazam/shared':
         specifier: workspace:*
         version: link:../shared
       better-auth:
@@ -99,7 +99,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@wazup/shared':
+      '@wazam/shared':
         specifier: workspace:*
         version: link:../shared
       better-auth:

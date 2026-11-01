@@ -1,5 +1,5 @@
 {
-  "name": "@wazup/web",
+  "name": "@wazam/web",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@wazup/shared": "workspace:*",
+    "@wazam/shared": "workspace:*",
     "better-auth": "^1.5.1",
     "iconoir-react": "^7.11.1",
     "livekit-client": "^2.9.7",

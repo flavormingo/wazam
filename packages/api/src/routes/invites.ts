@@ -5,10 +5,11 @@ import type { Database } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { createOptionalAuthMiddleware } from '../middleware.js';
 import { computePermissions } from '../permissions.js';
-import { Permissions, hasPermission } from '@wazup/shared';
+import { Permissions, hasPermission } from '@wazam/shared';
 import { nanoid } from 'nanoid';
 import { getPublicUrl } from '../storage.js';
-import { DEFAULT_PERMISSIONS } from '@wazup/shared';
+import { DEFAULT_PERMISSIONS } from '@wazam/shared';
+import { config } from '../config.js';
 import type Redis from 'ioredis';
 
 export function inviteRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redis) {
@@ -339,7 +340,7 @@ export function inviteRoutes(app: FastifyInstance, db: Kysely<Database>, redis: 
       }
     }
 
-    const inviteUrl = `https://wazup.chat/invite/${code}`;
+    const inviteUrl = `${config.webUrl}/invite/${code}`;
     const content = `join ${club.name}! ${inviteUrl}`;
 
     const message = await db

@@ -6,7 +6,7 @@ interface Props {
 export function WormMark({ size = 72, className }: Props) {
   return (
     <img
-      src="/wazup-mark.svg"
+      src="/wazam-mark.svg"
       alt=""
       aria-hidden="true"
       width={size}

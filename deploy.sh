@@ -5,7 +5,7 @@ set -euo pipefail
 : "${VPS_PORT:=22}"
 : "${VPS_PATH:=/opt/wazup}"
 
-bundle="$(mktemp -t wazup-deploy).tar.gz"
+bundle="$(mktemp -t wazam-deploy).tar.gz"
 
 echo "packing source (secrets and artifacts excluded)"
 tar czf "$bundle" \
@@ -22,13 +22,13 @@ tar czf "$bundle" \
   .
 
 echo "uploading to ${VPS_HOST}:${VPS_PATH}"
-scp -P "$VPS_PORT" "$bundle" "${VPS_HOST}:/tmp/wazup-deploy.tar.gz"
+scp -P "$VPS_PORT" "$bundle" "${VPS_HOST}:/tmp/wazam-deploy.tar.gz"
 
 ssh -p "$VPS_PORT" "$VPS_HOST" VPS_PATH="$VPS_PATH" bash -s <<'REMOTE'
 set -euo pipefail
 mkdir -p "$VPS_PATH"
-tar xzf /tmp/wazup-deploy.tar.gz -C "$VPS_PATH"
-rm -f /tmp/wazup-deploy.tar.gz
+tar xzf /tmp/wazam-deploy.tar.gz -C "$VPS_PATH"
+rm -f /tmp/wazam-deploy.tar.gz
 cd "$VPS_PATH"
 if [ ! -f .env ]; then
   echo "FATAL: $VPS_PATH/.env is missing — refusing to deploy" >&2

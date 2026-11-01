@@ -151,7 +151,7 @@ export function ClubSidebar() {
                 padding: 'var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md)',
                 background: 'var(--bg-raised)', border: '1px solid var(--border)',
                 borderRight: 'none', borderRadius: 'var(--r-md) 0 0 var(--r-md)', whiteSpace: 'nowrap',
-              }}>wazup.chat/club/</span>
+              }}>{window.location.host}/club/</span>
               <input
                 style={{
                   flex: 1, padding: 'var(--space-sm) var(--space-md)',

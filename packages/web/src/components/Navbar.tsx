@@ -41,7 +41,7 @@ export function Navbar({ onFriendsClick, onProfileClick, onSettingsClick }: Prop
         </button>
       </div>
       <div className="center">
-        <span className="logo" ref={logoRef} onClick={handleLogo}>wazup</span>
+        <span className="logo" ref={logoRef} onClick={handleLogo}>wazam</span>
       </div>
       <div className="right">
         <button className="icon-btn" data-tour="friends" onClick={onFriendsClick} aria-label="friends">

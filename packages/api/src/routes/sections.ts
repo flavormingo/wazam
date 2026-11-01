@@ -3,7 +3,7 @@ import type { Kysely } from 'kysely';
 import type { Database } from '../db/database.js';
 import { createAuthMiddleware } from '../middleware.js';
 import { computePermissions } from '../permissions.js';
-import { Permissions, hasPermission } from '@wazup/shared';
+import { Permissions, hasPermission } from '@wazam/shared';
 import type Redis from 'ioredis';
 
 export function sectionRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redis) {

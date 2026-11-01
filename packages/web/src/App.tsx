@@ -27,7 +27,7 @@ export function App() {
       <div className="loading-screen">
         <div className="loading-brand">
           <WormMark size={96} className="breathing" />
-          <span className="wordmark">wazup</span>
+          <span className="wordmark">wazam</span>
         </div>
       </div>
     );
