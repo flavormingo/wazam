@@ -39,15 +39,15 @@ const RING_MAX = 64;
 const TAIL_MIN = 22;
 
 const STEPS: Step[] = [
-  { key: 'intro', title: 'meet valentino', body: "hey, i'm valentino 🐾 your first friend on wazup. gimme twenty seconds and i'll show you around.", cta: 'show me around' },
-  { key: 'clubs', target: 'create-club', side: 'right', body: 'clubs are little hangouts for your people. tap the + to spin up your own.' },
-  { key: 'home', target: 'home', side: 'right', body: 'this bubble is home base. your dms and friends all live right here.' },
-  { key: 'friends', target: 'friends', body: 'add friends by name up here. once they say yes, dms and calls open up.' },
-  { key: 'profile', target: 'profile', body: 'tap your face to make your profile yours: pic, status, bio, all of it.' },
-  { key: 'settings', target: 'settings', body: 'themes, notifications, and everything else live in settings.' },
-  { key: 'valentino-dm', target: 'valentino-message', body: 'look, i already slid into your dms. 😺' },
-  { key: 'composer', target: 'composer', body: 'this is where you type. say wazup to me anytime, i always answer.' },
-  { key: 'outro', title: "you're all set", body: "that's the tour! poke around, and i'm always right here if you need me. now go say wazup. 👋", cta: "let's go" },
+  { key: 'intro', title: 'welcome!', body: "hi! i'm valentino, your first friend on wazup. let me give you a quick tour", cta: 'show me around' },
+  { key: 'clubs', target: 'create-club', side: 'right', body: 'clubs are little hangouts for your people. tap the + to create your own' },
+  { key: 'home', target: 'home', side: 'right', body: 'this bubble is home base. you can directly call and message your friends here' },
+  { key: 'friends', target: 'friends', body: 'add friends by name up here. you can message and call them or invite them to a club once they accept' },
+  { key: 'profile', target: 'profile', body: 'tap your profile to make it yours. photo, name, status and more' },
+  { key: 'settings', target: 'settings', body: 'you can mess with themes, notifications and plenty of other settings here' },
+  { key: 'valentino-dm', target: 'valentino-message', body: 'i already slid in your dms 😼' },
+  { key: 'composer', target: 'composer', body: 'just write your messages here. you can say hi to me any time' },
+  { key: 'outro', title: "that's all", body: 'you can always take the tour again from settings. make yourself at home and have fun ✌️', cta: 'peace' },
 ];
 
 const COACH_STEPS = STEPS.filter((s) => s.target);

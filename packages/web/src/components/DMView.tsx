@@ -121,8 +121,8 @@ export function DMView() {
     try {
       await api.startCall(dmChannelId);
       setOutgoingCall({ dmChannelId });
-    } catch (err) {
-      console.error('Failed to start call:', err);
+    } catch (err: any) {
+      toast.error(err.message || 'failed to start call');
     }
   };
 

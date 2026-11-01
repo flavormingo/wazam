@@ -4,8 +4,12 @@ import type { Database } from '../db/database.js';
 import type Redis from 'ioredis';
 import { WebhookReceiver } from 'livekit-server-sdk';
 import { config } from '../config.js';
+import { endActiveDmCall } from './calls.js';
 
 const ROOM_PREFIX = 'channel-';
+const DM_ROOM_PREFIX = 'dm-';
+const DUPLICATE_IDENTITY = 2;
+const MIGRATION = 8;
 
 export function webhookRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redis) {
   const receiver = new WebhookReceiver(config.livekitApiKey, config.livekitApiSecret);
@@ -29,6 +33,18 @@ export function webhookRoutes(app: FastifyInstance, db: Kysely<Database>, redis:
 
     const roomName = event.room?.name;
     const userId = event.participant?.identity;
+
+    if (roomName?.startsWith(DM_ROOM_PREFIX) && userId && !joined) {
+      const reason = event.participant?.disconnectReason;
+      if (reason === DUPLICATE_IDENTITY || reason === MIGRATION) return { ok: true };
+      const dmChannelId = roomName.slice(DM_ROOM_PREFIX.length);
+      const activeRaw = await redis.get(`call:active:${dmChannelId}`);
+      if (activeRaw && JSON.parse(activeRaw).userIds?.includes(userId)) {
+        await endActiveDmCall(db, redis, dmChannelId);
+      }
+      return { ok: true };
+    }
+
     if (!roomName || !roomName.startsWith(ROOM_PREFIX) || !userId) return { ok: true };
     const channelId = roomName.slice(ROOM_PREFIX.length);
 

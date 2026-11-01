@@ -181,6 +181,15 @@ export function useWsHandler() {
           break;
         case 'call.accepted': {
           const dmId = op.d.dm_channel_id;
+          const calls = useCallStore.getState();
+          const placedHere = calls.outgoingCall?.dmChannelId === dmId;
+          if (!placedHere) {
+            if (calls.incomingCall?.dmChannelId === dmId) {
+              setIncomingCall(null);
+              stopRing();
+            }
+            break;
+          }
           setOutgoingCall(null);
           stopRing();
           setActiveCall(dmId);
@@ -196,11 +205,19 @@ export function useWsHandler() {
           setOutgoingCall(null);
           stopRing();
           break;
-        case 'call.ended':
-          clearCallAll();
-          stopRing();
-          leaveVoice();
+        case 'call.ended': {
+          const dmId = op.d.dm_channel_id;
+          const calls = useCallStore.getState();
+          if (calls.incomingCall?.dmChannelId === dmId || calls.outgoingCall?.dmChannelId === dmId) {
+            setIncomingCall(null);
+            setOutgoingCall(null);
+            stopRing();
+          }
+          if (calls.activeCallDmChannelId === dmId) setActiveCall(null);
+          const voice = useVoiceStore.getState();
+          if (voice.callType === 'dm' && voice.dmChannelId === dmId) leaveVoice();
           break;
+        }
         case 'voice.state':
           useVoiceOccupancyStore.getState().setPresence(op.d.channel_id, op.d.user_id, op.d.joined);
           if (op.d.joined && op.d.user_id !== useAuthStore.getState().user?.id) {

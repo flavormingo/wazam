@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Room } from 'livekit-client';
 import { api } from '../lib/api';
 import { stopRing } from '../lib/sounds';
+import { useCallStore } from './call';
 
 interface Participant {
   identity: string;
@@ -35,6 +36,22 @@ interface VoiceState {
 
 let room: Room | null = null;
 let lkImport: Promise<typeof import('livekit-client')> | null = null;
+let aloneTimer: ReturnType<typeof setTimeout> | null = null;
+
+const DM_ALONE_TIMEOUT = 20000;
+
+function clearAloneTimer() {
+  if (aloneTimer) clearTimeout(aloneTimer);
+  aloneTimer = null;
+}
+
+function endDmCall() {
+  const { callType, dmChannelId } = useVoiceStore.getState();
+  if (callType !== 'dm' || !dmChannelId) return;
+  api.endCall(dmChannelId).catch(() => {});
+  useVoiceStore.getState().leaveVoice();
+  useCallStore.getState().clearAll();
+}
 
 export function preloadLiveKit() {
   if (!lkImport) lkImport = import('livekit-client');
@@ -90,8 +107,15 @@ function setupRoomListeners(r: Room, RoomEvent: any) {
     }
   }
 
-  r.on(RoomEvent.ParticipantConnected, () => syncParticipants());
-  r.on(RoomEvent.ParticipantDisconnected, () => syncParticipants());
+  r.on(RoomEvent.ParticipantConnected, () => {
+    clearAloneTimer();
+    syncParticipants();
+  });
+  r.on(RoomEvent.ParticipantDisconnected, (p: any) => {
+    syncParticipants();
+    const othersLeft = [...r.remoteParticipants.values()].some((rp) => rp.identity !== p.identity);
+    if (useVoiceStore.getState().callType === 'dm' && !othersLeft) endDmCall();
+  });
   r.on(RoomEvent.TrackMuted, () => syncParticipants());
   r.on(RoomEvent.TrackUnmuted, () => syncParticipants());
   r.on(RoomEvent.ActiveSpeakersChanged, () => syncParticipants());
@@ -123,6 +147,12 @@ function setupRoomListeners(r: Room, RoomEvent: any) {
   r.on(RoomEvent.Disconnected, () => {
     if (room !== r) return;
     room = null;
+    clearAloneTimer();
+    const { callType, dmChannelId } = useVoiceStore.getState();
+    if (callType === 'dm' && dmChannelId) {
+      api.endCall(dmChannelId).catch(() => {});
+      useCallStore.getState().clearAll();
+    }
     useVoiceStore.setState({ channelId: null, callType: null, dmChannelId: null, connecting: false, connected: false, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, participants: {} });
   });
 }
@@ -141,6 +171,13 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
 
   joinVoice: async (channelId: string) => {
     if (get().connecting) return;
+
+    const current = get();
+    if (current.callType === 'dm' && current.dmChannelId) {
+      api.endCall(current.dmChannelId).catch(() => {});
+      useCallStore.getState().clearAll();
+    }
+    clearAloneTimer();
 
     if (room) {
       room.disconnect();
@@ -224,9 +261,18 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
 
     setupRoomListeners(r, RoomEvent);
     syncParticipants();
+
+    clearAloneTimer();
+    if (r.remoteParticipants.size === 0) {
+      aloneTimer = setTimeout(() => {
+        aloneTimer = null;
+        if (room === r && r.remoteParticipants.size === 0) endDmCall();
+      }, DM_ALONE_TIMEOUT);
+    }
   },
 
   leaveVoice: () => {
+    clearAloneTimer();
     if (room) {
       room.disconnect();
       room = null;

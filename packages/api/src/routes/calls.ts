@@ -9,6 +9,20 @@ import type Redis from 'ioredis';
 
 const RING_TTL = 35;
 
+export async function endActiveDmCall(db: Kysely<Database>, redis: Redis, dmChannelId: string, exceptUserId?: string) {
+  const removed = await redis.del(`call:active:${dmChannelId}`);
+  if (!removed) return;
+  const members = await db
+    .selectFrom('dm_members')
+    .select('user_id')
+    .where('dm_channel_id', '=', dmChannelId)
+    .execute();
+  for (const m of members) {
+    if (m.user_id === exceptUserId) continue;
+    await redis.publish(`user:${m.user_id}`, JSON.stringify({ op: 'call.ended', d: { dm_channel_id: dmChannelId } }));
+  }
+}
+
 export function callRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Redis) {
   const requireAuth = createAuthMiddleware(db);
 
@@ -76,10 +90,7 @@ export function callRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
     if (!channel) return reply.status(403).send({ error: 'Not a member' });
     if (channel.type !== 'direct') return reply.status(400).send({ error: 'Calls only supported in direct DMs' });
 
-    const existingActive = await redis.get(`call:active:${dmChannelId}`);
-    if (existingActive) {
-      return reply.status(409).send({ error: 'Call already in progress' });
-    }
+    await endActiveDmCall(db, redis, dmChannelId, userId);
 
     const calleeId = await getOtherMemberId(dmChannelId, userId);
     if (!calleeId) return reply.status(400).send({ error: 'No other member found' });
@@ -139,10 +150,9 @@ export function callRoutes(app: FastifyInstance, db: Kysely<Database>, redis: Re
     const roomName = `dm-${dmChannelId}`;
     const token = await createLiveKitToken(userId, request.user!.username, roomName, request.user!.avatar_key ? getPublicUrl(request.user!.avatar_key) : null);
 
-    await redis.publish(
-      `user:${ringing.callerId}`,
-      JSON.stringify({ op: 'call.accepted', d: { dm_channel_id: dmChannelId } }),
-    );
+    for (const id of [ringing.callerId, userId]) {
+      await redis.publish(`user:${id}`, JSON.stringify({ op: 'call.accepted', d: { dm_channel_id: dmChannelId } }));
+    }
 
     return {
       token,
