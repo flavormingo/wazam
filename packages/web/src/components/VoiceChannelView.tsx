@@ -11,7 +11,7 @@ import { formatMessageTime } from '../lib/time';
 import { openLightbox } from '../stores/lightbox';
 import { scrollBehavior } from '../lib/preferences';
 import { wsClient } from '../lib/ws';
-import { VolumeIcon, MicIcon, MicMutedIcon, CameraIcon, CameraOffIcon, ScreenIcon, PhoneIcon, MultiBubbleIcon, SendIcon, EditIcon, TrashIcon, ChevronLeftIcon, FaceSmileIcon } from './icons';
+import { VolumeIcon, MicIcon, MicMutedIcon, CameraIcon, CameraOffIcon, RotateCameraIcon, ScreenIcon, PhoneIcon, MultiBubbleIcon, SendIcon, EditIcon, TrashIcon, ChevronLeftIcon, FaceSmileIcon } from './icons';
 import { EmojiPicker } from './EmojiPicker';
 import { MessageReactions } from './MessageReactions';
 import { toast } from '../stores/toast';
@@ -56,6 +56,8 @@ export function VoiceChannelView({ clubId, channelId }: Props) {
   const leaveVoice = useVoiceStore((s) => s.leaveVoice);
   const toggleMute = useVoiceStore((s) => s.toggleMute);
   const toggleCamera = useVoiceStore((s) => s.toggleCamera);
+  const canFlipCamera = useVoiceStore((s) => s.canFlipCamera);
+  const flipCamera = useVoiceStore((s) => s.flipCamera);
   const toggleScreenShare = useVoiceStore((s) => s.toggleScreenShare);
   const channels = useChannelsStore((s) => s.channels[clubId] ?? EMPTY_CHANNELS);
   const channel = channels.find((c: any) => c.id === channelId);
@@ -390,6 +392,11 @@ export function VoiceChannelView({ clubId, channelId }: Props) {
               >
                 {cameraEnabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
               </button>
+              {cameraEnabled && canFlipCamera && (
+                <button className="ctrl-btn" onClick={flipCamera} aria-label="flip camera">
+                  <RotateCameraIcon size={20} />
+                </button>
+              )}
               <button
                 className={`ctrl-btn ${screenSharing ? 'active' : ''}`}
                 onClick={toggleScreenShare}
@@ -575,6 +582,7 @@ export function VoiceChannelView({ clubId, channelId }: Props) {
 function VideoTile({ tile, focused, onClick }: { tile: TileDescriptor; focused: boolean; onClick: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [imgError, setImgError] = useState(false);
+  const cameraFacing = useVoiceStore((s) => s.cameraFacing);
 
   const source = tile.type === 'screen' ? 'screen_share' : 'camera';
   const trackTrigger = tile.type === 'screen' ? tile.hasScreen : tile.hasCamera;
@@ -616,7 +624,7 @@ function VideoTile({ tile, focused, onClick }: { tile: TileDescriptor; focused: 
       onClick={onClick}
     >
       {showVideo ? (
-        <video ref={videoRef} autoPlay playsInline muted className={isLocal && !isScreen ? 'mirror' : ''} />
+        <video ref={videoRef} autoPlay playsInline muted className={isLocal && !isScreen && cameraFacing !== 'environment' ? 'mirror' : ''} />
       ) : (
         <div className="tile-avatar">
           <span>

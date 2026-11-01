@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react'
 import { useVoiceStore, getRoom } from '../stores/voice';
 import { useCallStore } from '../stores/call';
 import { api } from '../lib/api';
-import { MicIcon, MicMutedIcon, CameraIcon, CameraOffIcon, ScreenIcon, PhoneIcon } from './icons';
+import { MicIcon, MicMutedIcon, CameraIcon, CameraOffIcon, RotateCameraIcon, ScreenIcon, PhoneIcon } from './icons';
 import type { Participant as LKParticipant, Track } from 'livekit-client';
 import './DMCallView.css';
 import './CallStage.css';
@@ -22,11 +22,14 @@ type TileDescriptor = {
 export function DMCallView({ dmChannelId }: { dmChannelId: string }) {
   const muted = useVoiceStore((s) => s.muted);
   const cameraEnabled = useVoiceStore((s) => s.cameraEnabled);
+  const connected = useVoiceStore((s) => s.connected);
   const screenSharing = useVoiceStore((s) => s.screenSharing);
   const participants = useVoiceStore((s) => s.participants);
   const leaveVoice = useVoiceStore((s) => s.leaveVoice);
   const toggleMute = useVoiceStore((s) => s.toggleMute);
   const toggleCamera = useVoiceStore((s) => s.toggleCamera);
+  const canFlipCamera = useVoiceStore((s) => s.canFlipCamera);
+  const flipCamera = useVoiceStore((s) => s.flipCamera);
   const toggleScreenShare = useVoiceStore((s) => s.toggleScreenShare);
   const clearAll = useCallStore((s) => s.clearAll);
 
@@ -166,6 +169,7 @@ export function DMCallView({ dmChannelId }: { dmChannelId: string }) {
         <button
           className={`ctrl-btn ${muted ? 'active' : ''}`}
           onClick={toggleMute}
+          disabled={!connected}
           aria-label={muted ? 'unmute' : 'mute'}
         >
           {muted ? <MicMutedIcon size={20} /> : <MicIcon size={20} />}
@@ -173,13 +177,20 @@ export function DMCallView({ dmChannelId }: { dmChannelId: string }) {
         <button
           className={`ctrl-btn ${cameraEnabled ? 'active' : ''}`}
           onClick={toggleCamera}
+          disabled={!connected}
           aria-label={cameraEnabled ? 'turn off camera' : 'turn on camera'}
         >
           {cameraEnabled ? <CameraIcon size={20} /> : <CameraOffIcon size={20} />}
         </button>
+        {cameraEnabled && canFlipCamera && (
+          <button className="ctrl-btn" onClick={flipCamera} disabled={!connected} aria-label="flip camera">
+            <RotateCameraIcon size={20} />
+          </button>
+        )}
         <button
           className={`ctrl-btn ${screenSharing ? 'active' : ''}`}
           onClick={toggleScreenShare}
+          disabled={!connected}
           aria-label={screenSharing ? 'stop sharing' : 'share screen'}
         >
           <ScreenIcon size={20} />
@@ -199,6 +210,7 @@ export function DMCallView({ dmChannelId }: { dmChannelId: string }) {
 function VideoTile({ tile, focused, onClick }: { tile: TileDescriptor; focused: boolean; onClick: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [imgError, setImgError] = useState(false);
+  const cameraFacing = useVoiceStore((s) => s.cameraFacing);
 
   const source = tile.type === 'screen' ? 'screen_share' : 'camera';
   const trackTrigger = tile.type === 'screen' ? tile.hasScreen : tile.hasCamera;
@@ -240,7 +252,7 @@ function VideoTile({ tile, focused, onClick }: { tile: TileDescriptor; focused: 
       onClick={onClick}
     >
       {showVideo ? (
-        <video ref={videoRef} autoPlay playsInline muted className={isLocal && !isScreen ? 'mirror' : ''} />
+        <video ref={videoRef} autoPlay playsInline muted className={isLocal && !isScreen && cameraFacing !== 'environment' ? 'mirror' : ''} />
       ) : (
         <div className="tile-avatar">
           <span>

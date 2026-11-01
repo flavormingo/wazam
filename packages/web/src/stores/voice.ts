@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Room } from 'livekit-client';
+import type { LocalVideoTrack, Room } from 'livekit-client';
 import { api } from '../lib/api';
 import { stopRing } from '../lib/sounds';
 import { useCallStore } from './call';
@@ -24,6 +24,8 @@ interface VoiceState {
   deafened: boolean;
   cameraEnabled: boolean;
   screenSharing: boolean;
+  cameraFacing: 'user' | 'environment';
+  canFlipCamera: boolean;
   participants: Record<string, Participant>;
   joinVoice: (channelId: string) => Promise<void>;
   joinDmCall: (dmChannelId: string, token: string, url: string) => Promise<void>;
@@ -31,12 +33,14 @@ interface VoiceState {
   toggleMute: () => void;
   toggleDeafen: () => void;
   toggleCamera: () => void;
+  flipCamera: () => void;
   toggleScreenShare: () => void;
 }
 
 let room: Room | null = null;
 let lkImport: Promise<typeof import('livekit-client')> | null = null;
 let aloneTimer: ReturnType<typeof setTimeout> | null = null;
+let flipping = false;
 
 const DM_ALONE_TIMEOUT = 20000;
 const HEARTBEAT_INTERVAL = 2000;
@@ -99,6 +103,23 @@ function syncParticipants() {
     participants[p.identity] = buildParticipant(p as any);
   }
   useVoiceStore.setState({ participants });
+}
+
+async function getCamera() {
+  if (!room || !lkImport) return null;
+  const lk = await lkImport;
+  const track = room.localParticipant.getTrackPublication(lk.Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+  return track ? { track, lk } : null;
+}
+
+async function syncCamera() {
+  const cam = await getCamera();
+  if (!cam) return;
+  const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+  useVoiceStore.setState({
+    canFlipCamera: devices.filter((d) => d.kind === 'videoinput').length > 1,
+    cameraFacing: cam.lk.facingModeFromLocalTrack(cam.track).facingMode === 'environment' ? 'environment' : 'user',
+  });
 }
 
 function setupRoomListeners(r: Room, RoomEvent: any) {
@@ -185,7 +206,7 @@ function setupRoomListeners(r: Room, RoomEvent: any) {
       api.endCall(dmChannelId).catch(() => {});
       useCallStore.getState().clearAll();
     }
-    useVoiceStore.setState({ channelId: null, callType: null, dmChannelId: null, connecting: false, connected: false, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, participants: {} });
+    useVoiceStore.setState({ channelId: null, callType: null, dmChannelId: null, connecting: false, connected: false, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, cameraFacing: 'user', canFlipCamera: false, participants: {} });
   });
 }
 
@@ -199,6 +220,8 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
   deafened: false,
   cameraEnabled: false,
   screenSharing: false,
+  cameraFacing: 'user',
+  canFlipCamera: false,
   participants: {},
 
   joinVoice: async (channelId: string) => {
@@ -247,7 +270,7 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
       return;
     }
 
-    set({ channelId, callType: 'channel', dmChannelId: null, connecting: false, connected: true, muted: false, deafened: false, cameraEnabled: false, screenSharing: false });
+    set({ channelId, callType: 'channel', dmChannelId: null, connecting: false, connected: true, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, cameraFacing: 'user', canFlipCamera: false });
 
     r.localParticipant.setMicrophoneEnabled(true).catch(() => {
       set({ muted: true });
@@ -285,7 +308,7 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
       return;
     }
 
-    set({ channelId: null, callType: 'dm', dmChannelId, connecting: false, connected: true, muted: false, deafened: false, cameraEnabled: false, screenSharing: false });
+    set({ channelId: null, callType: 'dm', dmChannelId, connecting: false, connected: true, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, cameraFacing: 'user', canFlipCamera: false });
 
     r.localParticipant.setMicrophoneEnabled(true).catch(() => {
       set({ muted: true });
@@ -309,10 +332,11 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
       room.disconnect();
       room = null;
     }
-    set({ channelId: null, callType: null, dmChannelId: null, connecting: false, connected: false, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, participants: {} });
+    set({ channelId: null, callType: null, dmChannelId: null, connecting: false, connected: false, muted: false, deafened: false, cameraEnabled: false, screenSharing: false, cameraFacing: 'user', canFlipCamera: false, participants: {} });
   },
 
   toggleMute: () => {
+    if (!get().connected) return;
     const { muted } = get();
     const next = !muted;
     set({ muted: next });
@@ -322,6 +346,7 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
   },
 
   toggleDeafen: () => {
+    if (!get().connected) return;
     const { deafened } = get();
     if (!deafened) {
       set({ deafened: true, muted: true });
@@ -347,15 +372,46 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
   },
 
   toggleCamera: () => {
+    if (!get().connected) return;
     const { cameraEnabled } = get();
     const next = !cameraEnabled;
     set({ cameraEnabled: next });
     if (room) {
-      room.localParticipant.setCameraEnabled(next).then(() => syncParticipants()).catch(() => {});
+      room.localParticipant.setCameraEnabled(next).then(() => {
+        syncParticipants();
+        if (next) syncCamera();
+      }).catch(() => {});
     }
   },
 
+  flipCamera: async () => {
+    const r = room;
+    if (flipping || !r || !get().connected) return;
+    const cam = await getCamera();
+    if (!cam) return;
+    flipping = true;
+    try {
+      const { facingMode, confidence } = cam.lk.facingModeFromLocalTrack(cam.track);
+      if (confidence === 'high') {
+        await cam.track.restartTrack({ facingMode: facingMode === 'environment' ? 'user' : 'environment' });
+      } else {
+        const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+        const current = cam.track.mediaStreamTrack.getSettings().deviceId;
+        const next = cams[(cams.findIndex((d) => d.deviceId === current) + 1) % cams.length];
+        if (next && next.deviceId !== current) await r.switchActiveDevice('videoinput', next.deviceId, true);
+      }
+    } catch (err) {
+      console.error('Failed to flip camera:', err);
+    } finally {
+      flipping = false;
+    }
+    if (room !== r) return;
+    await syncCamera();
+    syncParticipants();
+  },
+
   toggleScreenShare: async () => {
+    if (!get().connected) return;
     const { screenSharing } = get();
     const next = !screenSharing;
     if (room) {

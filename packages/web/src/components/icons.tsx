@@ -11,6 +11,7 @@ import {
   PhoneIncome,
   PhoneOutcome,
   PhoneXmark,
+  RotateCameraRight,
   Xmark,
   Group,
   Attachment,
@@ -91,6 +92,7 @@ export const PhoneIcon = icon(Phone);
 export const PhoneIncomeIcon = icon(PhoneIncome);
 export const PhoneOutcomeIcon = icon(PhoneOutcome);
 export const PhoneXmarkIcon = icon(PhoneXmark);
+export const RotateCameraIcon = icon(RotateCameraRight);
 export const XIcon = icon(Xmark);
 export const UsersIcon = icon(Group);
 export const PaperclipIcon = icon(Attachment);
