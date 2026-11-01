@@ -43,7 +43,7 @@
         align-items: center;
         gap: var(--space-sm);
         width: 100%;
-        padding: var(--space-xs) var(--space-sm);
+        padding: var(--space-sm);
         border-radius: var(--r-md);
         transition: background var(--fast);
 
@@ -85,7 +85,7 @@
       gap: var(--space-sm);
       width: 100%;
       min-height: 34px;
-      padding: var(--space-xs) var(--space-sm);
+      padding: var(--space-sm);
       border-radius: var(--r-md);
       transition: background var(--fast), outline-color var(--fast), box-shadow var(--fast);
       outline: 1.5px solid transparent;

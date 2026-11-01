@@ -20,7 +20,11 @@
       .name {
         font-weight: 600;
         font-size: var(--text-base);
-        flex: 1;
+        margin-right: auto;
+      }
+
+      button.name:hover {
+        text-decoration: underline;
       }
     }
 

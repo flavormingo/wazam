@@ -22,7 +22,7 @@
       align-items: center;
       gap: var(--space-sm);
       min-height: 34px;
-      padding: var(--space-xs) var(--space-sm);
+      padding: var(--space-sm);
       border-radius: var(--r-md);
       transition: background var(--fast);
       cursor: pointer;

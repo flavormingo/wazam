@@ -130,6 +130,7 @@ export function DMView() {
   const isOutgoingHere = outgoingCall?.dmChannelId === dmChannelId;
   const isDirectChannel = channel?.type === 'direct';
   const isValentino = isDirectChannel && channel.members?.some((m: any) => m.id === VALENTINO_ID);
+  const otherMember = isDirectChannel ? channel.members?.find((m: any) => m.id !== user?.id) : null;
 
   const handleSend = async () => {
     if (sending || !input.trim() || !dmChannelId) return;
@@ -232,7 +233,11 @@ export function DMView() {
     <div className="dm-view">
       <div className="header">
         {mobile && <button className="mobile-back" onClick={() => navigate('/dm')} aria-label="back"><ChevronLeftIcon size={20} /></button>}
-        <span className="name">{getRecipientName()}</span>
+        {otherMember ? (
+          <button className="name" onClick={() => openProfile(otherMember.id)}>{getRecipientName()}</button>
+        ) : (
+          <span className="name">{getRecipientName()}</span>
+        )}
         {dmChannelId && <MuteButton scopeType="dm" scopeId={dmChannelId} />}
         {isDirectChannel && !isValentino && (
           <button

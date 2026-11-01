@@ -39,6 +39,9 @@ let lkImport: Promise<typeof import('livekit-client')> | null = null;
 let aloneTimer: ReturnType<typeof setTimeout> | null = null;
 
 const DM_ALONE_TIMEOUT = 20000;
+const HEARTBEAT_INTERVAL = 2000;
+const HEARTBEAT_TIMEOUT = 10000;
+const HEARTBEAT = new TextEncoder().encode('hb');
 
 function clearAloneTimer() {
   if (aloneTimer) clearTimeout(aloneTimer);
@@ -116,6 +119,34 @@ function setupRoomListeners(r: Room, RoomEvent: any) {
     const othersLeft = [...r.remoteParticipants.values()].some((rp) => rp.identity !== p.identity);
     if (useVoiceStore.getState().callType === 'dm' && !othersLeft) endDmCall();
   });
+
+  const lastHeard = new Map<string, number>();
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
+  if (useVoiceStore.getState().callType === 'dm') {
+    r.on(RoomEvent.DataReceived, (_payload: Uint8Array, p: any, _kind: any, topic?: string) => {
+      if (topic === 'hb' && p) lastHeard.set(p.identity, Date.now());
+    });
+    r.on(RoomEvent.Reconnected, () => {
+      const now = Date.now();
+      for (const id of lastHeard.keys()) lastHeard.set(id, now);
+    });
+    heartbeat = setInterval(() => {
+      if (room !== r) {
+        if (heartbeat) clearInterval(heartbeat);
+        return;
+      }
+      r.localParticipant.publishData(HEARTBEAT, { reliable: false, topic: 'hb' }).catch(() => {});
+      if (r.state !== 'connected') return;
+      const now = Date.now();
+      for (const [id, at] of lastHeard) {
+        if (now - at > HEARTBEAT_TIMEOUT && r.remoteParticipants.has(id)) {
+          endDmCall();
+          return;
+        }
+      }
+    }, HEARTBEAT_INTERVAL);
+  }
+
   r.on(RoomEvent.TrackMuted, () => syncParticipants());
   r.on(RoomEvent.TrackUnmuted, () => syncParticipants());
   r.on(RoomEvent.ActiveSpeakersChanged, () => syncParticipants());
@@ -145,6 +176,7 @@ function setupRoomListeners(r: Room, RoomEvent: any) {
   });
 
   r.on(RoomEvent.Disconnected, () => {
+    if (heartbeat) clearInterval(heartbeat);
     if (room !== r) return;
     room = null;
     clearAloneTimer();

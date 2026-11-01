@@ -1,12 +1,13 @@
+import { useNavigate } from 'react-router';
 import { useVoiceStore } from '../stores/voice';
 import { useChannelsStore } from '../stores/channels';
 import { useClubsStore } from '../stores/clubs';
 import { useCallStore } from '../stores/call';
+import { useDmsStore } from '../stores/dms';
+import { useAuthStore } from '../stores/auth';
 import { api } from '../lib/api';
 import { MicIcon, MicMutedIcon, HeadphonesIcon, PhoneIcon } from './icons';
 import './VoicePanel.css';
-
-const EMPTY_CHANNELS: any[] = [];
 
 export function VoicePanel() {
   const channelId = useVoiceStore((s) => s.channelId);
@@ -19,10 +20,16 @@ export function VoicePanel() {
   const toggleDeafen = useVoiceStore((s) => s.toggleDeafen);
   const leaveVoice = useVoiceStore((s) => s.leaveVoice);
   const clearCallAll = useCallStore((s) => s.clearAll);
-  const currentClubId = useClubsStore((s) => s.currentClubId);
-  const channels = useChannelsStore((s) => currentClubId ? s.channels[currentClubId] ?? EMPTY_CHANNELS : EMPTY_CHANNELS);
+  const channels = useChannelsStore((s) => s.channels);
+  const clubs = useClubsStore((s) => s.clubs);
+  const dmChannels = useDmsStore((s) => s.channels);
+  const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
 
-  const channel = channels.find((c: any) => c.id === channelId);
+  const clubId = channelId ? Object.keys(channels).find((id) => channels[id].some((c: any) => c.id === channelId)) : undefined;
+  const channel = clubId ? channels[clubId].find((c: any) => c.id === channelId) : undefined;
+  const club = clubs.find((c: any) => c.id === clubId);
+  const callee = dmChannels.find((c: any) => c.id === dmChannelId)?.members?.find((m: any) => m.id !== user?.id);
 
   if (!connected) return null;
 
@@ -34,17 +41,22 @@ export function VoicePanel() {
     leaveVoice();
   };
 
-  const label = callType === 'dm' ? 'dm call' : (channel?.name || 'voice');
+  const openCall = () => {
+    if (callType === 'dm' && dmChannelId) navigate(`/dm/${dmChannelId}`);
+    else if (channelId && clubId) navigate(`/club/${club?.slug || clubId}/channel/${channelId}`);
+  };
+
+  const label = callType === 'dm' ? (callee ? `call with ${callee.name}` : 'private call') : (channel?.name || 'voice');
 
   return (
     <div className="voice-panel">
-      <div className="info">
-        <div className="status">
+      <button className="info" onClick={openCall}>
+        <span className="status">
           <span className="dot" />
           connected
-        </div>
-        <div className="channel">{label}</div>
-      </div>
+        </span>
+        <span className="channel">{label}</span>
+      </button>
       <div className="controls">
         <button
           className={`icon-btn ${muted ? 'active' : ''}`}

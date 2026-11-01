@@ -3,9 +3,9 @@ export const VALENTINO_USERNAME = 'valentino';
 export const VALENTINO_DISPLAY_NAME = 'Valentino';
 export const VALENTINO_AVATAR_KEY = 'system/valentino.svg';
 
-export const VALENTINO_WELCOME = `hey — welcome to wazup! 🐾
+export const VALENTINO_WELCOME = `yo! welcome to wazup
 
-i'm valentino, your first friend around here. tap the + to start a club, this is your dms, and i'm always right here whenever you wanna say wazup. poke around — you've got this. 👋`;
+i'm valentino, your first friend around here. these are your direct messages. tap the + to start a club where you can hang out with friends. feel free to explore, and just head to settings if you ever want a tour`;
 
 export const VALENTINO_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Valentino">
   <rect width="240" height="240" fill="#FFC72C"/>

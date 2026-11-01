@@ -156,8 +156,8 @@
       align-items: center;
       gap: var(--space-sm);
       width: 100%;
-      height: 34px;
-      padding: 6px var(--space-sm);
+      min-height: 34px;
+      padding: var(--space-xs) var(--space-sm);
       border-radius: var(--r-md);
       color: var(--fg-3);
       transition: background var(--fast), color var(--fast), box-shadow var(--fast), outline-color var(--fast);
